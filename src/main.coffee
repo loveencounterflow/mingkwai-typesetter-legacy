@@ -162,10 +162,10 @@ Y88b  d88P Y88b. .d88P Y88b. .d88P 888  T88b  888  .d88P   888   888   Y8888  d8
 
 unless module.parent?
   #.........................................................................................................
-  TS    = @
-  doc   = TS.new_document()
+  MKTS  = @
+  doc   = MKTS.new_document()
   # for idx in [ 0 .. 10 ]
-  #   debug idx, ( xy = TS.xy_from_idx doc, idx ), ( TS.idx_from_xy doc, xy )
+  #   debug idx, ( xy = MKTS.xy_from_idx doc, idx ), ( MKTS.idx_from_xy doc, xy )
   cell_idx  = 0
   chrs      = XNCHR.chrs_from_text '畢昇發明活字印刷術宋沈括著《夢溪筆談》卷十八記載'
 
@@ -175,11 +175,11 @@ unless module.parent?
   app.get "/", ( request, response ) ->
     me        = doc
     last_y    = null
-    TS.put me, chrs[ cell_idx ]
+    MKTS.put me, chrs[ cell_idx ]
     cell_idx += 1
     response.write "<table border=1>\n"
     for cell, idx in me[ 'cells' ]
-      [ x, y, ] = TS.xy_from_idx me, idx
+      [ x, y, ] = MKTS.xy_from_idx me, idx
       if y isnt last_y
         response.write "</tr>\n" unless y is 0
         response.write "<tr>"
