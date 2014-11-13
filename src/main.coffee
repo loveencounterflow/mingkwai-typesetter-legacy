@@ -25,7 +25,7 @@ echo                      = TRM.echo.bind TRM
 RMY                       = require 'remarkably'
 Htmlparser                = ( require 'htmlparser2' ).Parser
 # XNCHR                     = require './XNCHR'
-XNCHR                     = require '/Volumes/Storage/cnd/node_modules/jizura-datasources/src/XNCHR.coffee'
+XNCHR                     = require 'XNCHR.coffee'
 #...........................................................................................................
 P1                        = require 'pipedreams'
 # options                   = require '../options'
@@ -40,8 +40,8 @@ verbose                   = no
     cells:            []
     cells_per_line:   8
     lines_per_page:   6
-    # xy:               [ 0, 0, ]
-    idx:              0
+    idx:              0 # next glyph position
+    # pos:              0 # cursor
     size:             1
   return R
 
@@ -51,7 +51,7 @@ verbose                   = no
   R = me[ 'cells' ][ idx ]
   if R is undefined
     return fallback if arguments.length > 2
-    throw new Error "position #{@_rpr_pos pos} out of bounds"
+    throw new Error "position #{@_rpr_pos me, pos} out of bounds"
   return R
 
 #-----------------------------------------------------------------------------------------------------------
@@ -74,6 +74,41 @@ verbose                   = no
   debug '### TAINT advance_chr simplified ###'
   me[ 'idx' ] += 1
   return me
+
+###
+#===========================================================================================================
+
+
+
+ .d8888b.   .d88888b.  888b     d888 8888888b.  8888888b.  8888888888  .d8888b.   .d8888b.
+d88P  Y88b d88P" "Y88b 8888b   d8888 888   Y88b 888   Y88b 888        d88P  Y88b d88P  Y88b
+888    888 888     888 88888b.d88888 888    888 888    888 888        Y88b.      Y88b.
+888        888     888 888Y88888P888 888   d88P 888   d88P 8888888     "Y888b.    "Y888b.
+888        888     888 888 Y888P 888 8888888P"  8888888P"  888            "Y88b.     "Y88b.
+888    888 888     888 888  Y8P  888 888        888 T88b   888              "888       "888
+Y88b  d88P Y88b. .d88P 888   "   888 888        888  T88b  888        Y88b  d88P Y88b  d88P
+ "Y8888P"   "Y88888P"  888       888 888        888   T88b 8888888888  "Y8888P"   "Y8888P"
+
+
+#===========================================================================================================
+###
+
+#-----------------------------------------------------------------------------------------------------------
+@set_size = ( me, size ) ->
+  throw new Error "unsupported size #{rpr size}" unless size in [ 1, 2, 3, 4, ]
+  me[ 'size' ] = size
+  return me
+
+#-----------------------------------------------------------------------------------------------------------
+@compress = ( me ) ->
+  { size, idx, }  = me
+  throw new Error "unsupported size #{rpr size} for compress" unless size > 1
+  [ _, y, ]       = @xy_from_idx me, idx
+  y0              = @_previous_grid_int y, size
+  y1              = @_next_grid_int     y, size
+  debug "compressing lines #{y0} .. #{y1}"
+  return me
+
 
 ###
 #===========================================================================================================
@@ -132,17 +167,17 @@ Y88b  d88P Y88b. .d88P Y88b. .d88P 888  T88b  888  .d88P   888   888   Y8888  d8
   { keep_x_grid, }  = me
   [ x, y, ]         = xy
   if keep_x_grid and size > 1
-    throw new Error "#{@_rpr_xy xy} not within x grid size #{size}" unless x % size is 0
-  throw new Error "#{@_rpr_xy xy} not within y grid size #{size}" unless y % size is 0
+    throw new Error "#{@_rpr_xy me, xy} not within x grid size #{size}" unless x %% size is 0
+  throw new Error "#{@_rpr_xy me, xy} not within y grid size #{size}" unless y %% size is 0
   old_content = me[ 'cells' ][ @idx_from_xy me, xy ]
   unless old_content is undefined
-    throw new Error "cannot overwrite #{rpr old_content} with #{rpr content} #{@_rpr_xy xy}"
+    throw new Error "cannot overwrite #{rpr old_content} with #{rpr content} #{@_rpr_xy me, xy}"
   return me
 
 #-----------------------------------------------------------------------------------------------------------
-@_rpr_pos   = ( pos  ) -> if TYPES.isa_number pos then @_rpr_idx pos else @_rpr_xy pos
-@_rpr_xy    = ( xy   ) -> "@( #{xy[ 0 ]}, #{xy[ 0 ]} )"
-@_rpr_idx   = ( idx  ) -> @_rpr_xy @xy_from_pos idx
+@_rpr_pos   = ( me, pos  ) -> if TYPES.isa_number pos then @_rpr_idx me, pos else @_rpr_xy me, pos
+@_rpr_xy    = ( me, xy   ) -> "@( #{xy[ 0 ]}, #{xy[ 0 ]} )"
+@_rpr_idx   = ( me, idx  ) -> @_rpr_xy me, @xy_from_pos idx
 
 
 ###
@@ -165,8 +200,10 @@ Y88b  d88P Y88b. .d88P Y88b. .d88P 888  T88b  888  .d88P   888   888   Y8888  d8
 ###
 
 #-----------------------------------------------------------------------------------------------------------
-@_is_even       = ( n ) -> n / 2 is Math.floor n / 2
-@_next_odd_int  = ( n ) -> ( ( n // 2 ) * 2 ) + 1
+# @_next_odd_int  = ( n ) -> ( ( n // 2 ) * 2 ) + 1
+# @_is_even           = ( n )         -> n / 2 is Math.floor n / 2
+@_previous_grid_int = ( me, n, module ) -> ( n // module ) * module
+@_next_grid_int     = ( me, n, module ) -> ( @_previous_grid_int n, module ) + module
 
 
 
@@ -214,7 +251,6 @@ Y88b  d88P 888        888  T88b     Y888P    888        888  T88b
       @put me, if chr_idx <= last_chr_idx then chrs[ chr_idx ] else '〓'
       chr_idx  += 1
       [ x1, y1, ] = @get_last_xy me
-      debug '©3q1', 'last xy:', [ x1, y1, ]
       response.write "<table border=1>\n"
       for y in [ 0 .. y1 ]
         response.write "<tr>"
@@ -240,9 +276,6 @@ Y88b  d88P 888        888  T88b     Y888P    888        888  T88b
 
 ############################################################################################################
 unless module.parent?
-  # me    = @new_document()
-  # debug @_get me, [ 1, 1, ], undefined
   @serve()
-
 
 
