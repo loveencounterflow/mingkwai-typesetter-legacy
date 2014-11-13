@@ -29,6 +29,7 @@ XNCHR                     = require '/Volumes/Storage/cnd/node_modules/jizura-da
 #...........................................................................................................
 P1                        = require 'pipedreams'
 # options                   = require '../options'
+#...........................................................................................................
 verbose                   = yes
 verbose                   = no
 
@@ -42,6 +43,15 @@ verbose                   = no
     # xy:               [ 0, 0, ]
     idx:              0
     size:             1
+  return R
+
+#-----------------------------------------------------------------------------------------------------------
+@_get = ( me, pos, fallback ) ->
+  idx = @idx_from_pos me, pos
+  R = me[ 'cells' ][ idx ]
+  if R is undefined
+    return fallback if arguments.length > 2
+    throw new Error "position #{@_rpr_pos pos} out of bounds"
   return R
 
 #-----------------------------------------------------------------------------------------------------------
@@ -110,6 +120,14 @@ Y88b  d88P Y88b. .d88P Y88b. .d88P 888  T88b  888  .d88P   888   888   Y8888  d8
   return @xy_from_idx me, pos
 
 #-----------------------------------------------------------------------------------------------------------
+@get_last_idx = ( me ) ->
+  return me[ 'cells' ].length - 1
+
+#-----------------------------------------------------------------------------------------------------------
+@get_last_xy = ( me, pos ) ->
+  return @xy_from_idx me, @get_last_idx me
+
+#-----------------------------------------------------------------------------------------------------------
 @_validate_xy = ( me, xy, size ) ->
   { keep_x_grid, }  = me
   [ x, y, ]         = xy
@@ -123,8 +141,9 @@ Y88b  d88P Y88b. .d88P Y88b. .d88P 888  T88b  888  .d88P   888   888   Y8888  d8
 
 #-----------------------------------------------------------------------------------------------------------
 @_rpr_pos   = ( pos  ) -> if TYPES.isa_number pos then @_rpr_idx pos else @_rpr_xy pos
-@_rpr_xy    = ( xy   ) -> "@(#{xy[ 0 ]}, #{xy[ 0 ]})"
+@_rpr_xy    = ( xy   ) -> "@( #{xy[ 0 ]}, #{xy[ 0 ]} )"
 @_rpr_idx   = ( idx  ) -> @_rpr_xy @xy_from_pos idx
+
 
 ###
 #===========================================================================================================
@@ -150,8 +169,68 @@ Y88b  d88P Y88b. .d88P Y88b. .d88P 888  T88b  888  .d88P   888   888   Y8888  d8
 @_next_odd_int  = ( n ) -> ( ( n // 2 ) * 2 ) + 1
 
 
-############################################################################################################
 
+###
+#===========================================================================================================
+
+
+
+ .d8888b.  8888888888 8888888b.  888     888 8888888888 8888888b.
+d88P  Y88b 888        888   Y88b 888     888 888        888   Y88b
+Y88b.      888        888    888 888     888 888        888    888
+ "Y888b.   8888888    888   d88P Y88b   d88P 8888888    888   d88P
+    "Y88b. 888        8888888P"   Y88b d88P  888        8888888P"
+      "888 888        888 T88b     Y88o88P   888        888 T88b
+Y88b  d88P 888        888  T88b     Y888P    888        888  T88b
+ "Y8888P"  8888888888 888   T88b     Y8P     8888888888 888   T88b
+
+
+
+#===========================================================================================================
+###
+
+
+
+#-----------------------------------------------------------------------------------------------------------
+@_rpr_cell = ( cell ) ->
+  return '\u3000' if cell is undefined
+  return '〼'     if cell is null
+  return cell     if TYPES.isa_text cell
+  return rpr cell
+
+#-----------------------------------------------------------------------------------------------------------
+@serve = ->
+  express   = require 'express'
+  #.........................................................................................................
+  me        = @new_document()
+  app       = express()
+  #---------------------------------------------------------------------------------------------------------
+  app.get "/", do =>
+    chrs          = XNCHR.chrs_from_text '畢昇發明活字印刷術宋沈括著《夢溪筆談》卷十八記載'
+    chr_idx       = 0
+    last_chr_idx  = chrs.length - 1
+    #.......................................................................................................
+    return ( request, response ) =>
+      @put me, if chr_idx <= last_chr_idx then chrs[ chr_idx ] else '〓'
+      chr_idx  += 1
+      [ x1, y1, ] = @get_last_xy me
+      debug '©3q1', 'last xy:', [ x1, y1, ]
+      response.write "<table border=1>\n"
+      for y in [ 0 .. y1 ]
+        response.write "<tr>"
+        for x in [ 0 ... me[ 'cells_per_line' ] ]
+          cell = @_rpr_cell @_get me, [ x, y, ], undefined
+          response.write "<td>#{cell}</td>"
+        response.write "</tr>\n"
+      response.write "</table>\n"
+      response.end()
+  #---------------------------------------------------------------------------------------------------------
+  server = app.listen 3000, ->
+    host = server.address().address
+    port = server.address().port
+    help "明快排字机 listening at http://#{host}:#{port}"
+
+############################################################################################################
 
 
 #-----------------------------------------------------------------------------------------------------------
@@ -159,40 +238,11 @@ Y88b  d88P Y88b. .d88P Y88b. .d88P 888  T88b  888  .d88P   888   888   Y8888  d8
   [ x, y, ] = @xy_from_pos me, pos
   return me[ 'cells_per_line' ] - ( x %% me[ 'cells_per_line' ] )
 
-
+############################################################################################################
 unless module.parent?
-  #.........................................................................................................
-  MKTS  = @
-  doc   = MKTS.new_document()
-  # for idx in [ 0 .. 10 ]
-  #   debug idx, ( xy = MKTS.xy_from_idx doc, idx ), ( MKTS.idx_from_xy doc, xy )
-  cell_idx  = 0
-  chrs      = XNCHR.chrs_from_text '畢昇發明活字印刷術宋沈括著《夢溪筆談》卷十八記載'
-
-  express = require 'express'
-  app     = express()
-
-  app.get "/", ( request, response ) ->
-    me        = doc
-    last_y    = null
-    MKTS.put me, chrs[ cell_idx ]
-    cell_idx += 1
-    response.write "<table border=1>\n"
-    for cell, idx in me[ 'cells' ]
-      [ x, y, ] = MKTS.xy_from_idx me, idx
-      if y isnt last_y
-        response.write "</tr>\n" unless y is 0
-        response.write "<tr>"
-        last_y = y
-      response.write "<td>#{cell}</td>"
-    response.write "</tr></table>\n"
-    response.end()
-
-  server = app.listen 3000, ->
-    host = server.address().address
-    port = server.address().port
-    help "Example app listening at http://#{host}:#{port}"
-
+  # me    = @new_document()
+  # debug @_get me, [ 1, 1, ], undefined
+  @serve()
 
 
 
