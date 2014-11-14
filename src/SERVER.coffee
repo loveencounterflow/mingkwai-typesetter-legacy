@@ -85,12 +85,13 @@ get_doc_updater = ->
           switch chr
             when '|'
               MKTS.set_size doc, 2
-              MKTS.advance_chr doc
+              MKTS.advance_chr_if_necessary doc, true
               done = no
               # MKTS.set_size doc, 1
               # MKTS.compress doc
             else
               MKTS.put doc, chr # else '〓'
+              done = yes
           break if done
       #-----------------------------------------------------------------------------------------------------
       else

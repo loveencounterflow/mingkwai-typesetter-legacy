@@ -45,6 +45,7 @@ verbose                   = no
     size:             1
     # auto_space_chr:   '\u3000'
     auto_space_chr:   '＊'
+    block_space_chr:  '＃'
   return R
 
 #-----------------------------------------------------------------------------------------------------------
@@ -92,33 +93,76 @@ verbose                   = no
 
 #-----------------------------------------------------------------------------------------------------------
 @put = ( me, content ) ->
-  { idx, } = me
+  ### TAINT `put` doesn't honor `size` ###
+  { idx
+    size
+    cells
+    block_space_chr }   = me
+  [ x0, y0, ]           = @_get_xy me
+  #.........................................................................................................
   @_set me, idx, content
-  @advance_chr me
-
-#-----------------------------------------------------------------------------------------------------------
-@_put_auto_space = ( me ) ->
-  idx = me[ 'idx' ] += 1
-  me[ 'cells' ][ idx ] = me[ 'auto_space_chr' ]
-  return me
+  #.........................................................................................................
+  for dx in [ 0 ... size ]
+    for dy in [ 0 ... size ]
+      continue if dx is dy is 0
+      cells[ @idx_from_xy me, [ x0 + dx, y0 + dy, ] ] = block_space_chr
+  #.........................................................................................................
+  return @advance_chr me
 
 #-----------------------------------------------------------------------------------------------------------
 @advance_chr = ( me ) ->
-  debug '### TAINT advance_chr simplified ###'
-  { size }      = me
+  { size, cells, } = me
+  #.........................................................................................................
+  ### If character size is 1, we can simply advance to the next cell. Since it is not allowed to
+    retroactively change cell contents, this should always put on a free cell. ###
   if size is 1
-    me[ 'idx' ] += 1
-  else
-    me[ 'size' ] = 1
     loop
-      line_too_short  = ( @_get_remaining_line_length me ) < 1
-      wrong_grid_line = ( ( @_get_y me ) %% size ) != 0
-      debug '©4r1', line_too_short, wrong_grid_line, me
-      break if ( not line_too_short ) and ( not wrong_grid_line )
-      # me.observe 'advance_chr', if me.observe?
-      @_put_auto_space me
-    me[ 'size' ] = size
+      me[ 'idx' ]  += 1
+      cell_is_free  = cells[ me[ 'idx' ] ] is undefined
+      break if cell_is_free
+    return me
+  #.........................................................................................................
+  ### If character size `s` is greater than 1, we must advance to a position on a line that has both an
+    integer multiple of `s` free cells left and that is a multiple integer (including 0) of `s` lines from
+    the top. We go step by step, filling up blank cells with `auto_space_chr`. ###
+  loop
+    me[ 'idx' ]        += 1
+    enough_free_cells   = ( @_get_remaining_line_length me ) >= 1
+    on_grid_line        = ( ( @_get_y me ) %% size ) is 0
+    cell_is_free        = cells[ me[ 'idx' ] ] is undefined
+    break if enough_free_cells and on_grid_line and cell_is_free
+    me[ 'cells' ].push me[ 'auto_space_chr' ]
   return me
+
+#-----------------------------------------------------------------------------------------------------------
+@advance_chr_if_necessary = ( me ) ->
+  ### Like `advance_chr`, but assuming that an advance has just been taken place and we have too look
+    whther the new position is suitable for a character of (a new) `size`. ###
+  { size, cells, } = me
+  #.........................................................................................................
+  ### If character size is 1, we can simply stay where we are. ###
+  if size is 1
+    loop
+      cell_is_free  = cells[ me[ 'idx' ] ] is undefined
+      break if cell_is_free
+      me[ 'idx' ]  += 1
+    return me
+  #.........................................................................................................
+  ### If character size `s` is greater than 1, we must advance to a position on a line that has both an
+    integer multiple of `s` free cells left and that is a multiple integer (including 0) of `s` lines from
+    the top. We go step by step, filling up blank cells with `auto_space_chr`. ###
+  # count = 0
+  loop
+    enough_free_cells   = ( @_get_remaining_line_length me ) >= 1
+    on_grid_line        = ( ( @_get_y me ) %% size ) is 0
+    cell_is_free        = cells[ me[ 'idx' ] ] is undefined
+    # debug '©2a1', ( @_rpr_pos me, me[ 'idx' ] ), enough_free_cells, on_grid_line
+    break if enough_free_cells and on_grid_line and cell_is_free
+    me[ 'cells' ].push me[ 'auto_space_chr' ]
+    me[ 'idx' ] += 1
+    # count += 1; break if count > 10
+  return me
+
 
 ###
 #===========================================================================================================
@@ -258,7 +302,8 @@ Y88b  d88P Y88b. .d88P Y88b. .d88P 888  T88b  888  .d88P   888   888   Y8888  d8
 
 #-----------------------------------------------------------------------------------------------------------
 @_rpr_cell = ( me, cell ) ->
-  return '\u3000' if cell is undefined
+  # return '\u3000' if cell is undefined
+  return '〇'     if cell is undefined
   return '〼'     if cell is null
   return cell     if TYPES.isa_text cell
   return rpr cell
