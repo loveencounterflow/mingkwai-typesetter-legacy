@@ -48,9 +48,24 @@ for name_ of TEACUP
               background-color:   rgba(227, 166, 81, 0.6)
               border:             3px solid red
 
+            .auto-space
+              background-color:   rgba(150, 50, 50, 0.6)
+            .block-space
+              background-color:   rgba(30, 50, 50, 0.6)
+            .free-cell
+              color:              rgba( 0, 0, 0, 0.3 )
+
             #json-display-doc
             #json-display-cells
               border:             1px solid red
+
+            #doc-table td
+              box-sizing:         border-box
+              -moz-box-sizing:    border-box
+              width:              1.3em
+              height:             1.3em
+              text-align:         center
+              vertical-align:     middle
             """
       #=====================================================================================================
       BODY =>
@@ -90,8 +105,8 @@ for name_ of TEACUP
             socket.on 'change', ( observee, action, target_txt, name, value ) ->
               log observee, target_txt
               switch observee
-                when 'doc'
-                  ( $ '#json-display-doc' ).text target_txt, null, '  '
+                # when 'doc'
+                #   ( $ '#json-display-doc' ).text target_txt, null, '  '
                 when 'cells'
                   ( $ '#json-display-cells' ).text JSON.stringify value
             #...............................................................................................
@@ -104,18 +119,27 @@ for name_ of TEACUP
 #-----------------------------------------------------------------------------------------------------------
 @doc_table = ( doc ) ->
   return render =>
-    [ x1, y1, ] = MKTS.get_next_xy doc
-    [ xc, yc, ] = MKTS.xy_from_idx doc, doc[ 'idx' ]
+    { auto_space_chr
+      block_space_chr
+      free_cell_chr
+      cells_per_line }  = doc
+    #.......................................................................................................
+    [ x1, y1, ]         = MKTS.get_next_xy doc
+    [ xc, yc, ]         = MKTS.xy_from_idx doc, doc[ 'idx' ]
+    #.......................................................................................................
     TABLE border: 1, =>
       for y in [ 0 .. y1 ]
         TR =>
-          for x in [ 0 ... doc[ 'cells_per_line' ] ]
+          for x in [ 0 ... cells_per_line ]
             cell  = MKTS._get doc, [ x, y, ], undefined
             cell  = MKTS._rpr_cell doc, cell
             clasz = []
-            clasz.push '.this-col'   if x is xc
-            clasz.push '.this-row'   if y is yc
-            clasz.push '.this-cell'  if x is xc and y is yc
+            clasz.push '.this-col'    if x is xc
+            clasz.push '.this-row'    if y is yc
+            clasz.push '.this-cell'   if x is xc and y is yc
+            clasz.push '.auto-space'  if cell is auto_space_chr
+            clasz.push '.block-space' if cell is block_space_chr
+            clasz.push '.free-cell'   if cell is free_cell_chr
             TD ( clasz.join '' ), => cell
 
 

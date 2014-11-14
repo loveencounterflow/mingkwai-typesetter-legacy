@@ -46,6 +46,7 @@ verbose                   = no
     # auto_space_chr:   '\u3000'
     auto_space_chr:   '＊'
     block_space_chr:  '＃'
+    free_cell_chr:    '〇'
   return R
 
 #-----------------------------------------------------------------------------------------------------------
@@ -61,12 +62,14 @@ verbose                   = no
     S =
       #.....................................................................................................
       get: ( target, name ) ->
+        value = target[ name ]
         handler observee_name, 'get', target, name
-        return target[ name ]
+        return value
       #.....................................................................................................
       set: ( target, name, value ) ->
+        target[ name ] = value
         handler observee_name, 'set', target, name, value
-        return target[ name ] = value
+        return value
     return S
   #.........................................................................................................
   R             = @new_document settings
@@ -131,7 +134,7 @@ verbose                   = no
     on_grid_line        = ( ( @_get_y me ) %% size ) is 0
     cell_is_free        = cells[ me[ 'idx' ] ] is undefined
     break if enough_free_cells and on_grid_line and cell_is_free
-    me[ 'cells' ].push me[ 'auto_space_chr' ]
+    me[ 'cells' ][ me[ 'idx' ] ] = me[ 'auto_space_chr' ] if cell_is_free
   return me
 
 #-----------------------------------------------------------------------------------------------------------
@@ -158,7 +161,7 @@ verbose                   = no
     cell_is_free        = cells[ me[ 'idx' ] ] is undefined
     # debug '©2a1', ( @_rpr_pos me, me[ 'idx' ] ), enough_free_cells, on_grid_line
     break if enough_free_cells and on_grid_line and cell_is_free
-    me[ 'cells' ].push me[ 'auto_space_chr' ]
+    me[ 'cells' ][ me[ 'idx' ] ] = me[ 'auto_space_chr' ] if cell_is_free
     me[ 'idx' ] += 1
     # count += 1; break if count > 10
   return me
@@ -303,9 +306,9 @@ Y88b  d88P Y88b. .d88P Y88b. .d88P 888  T88b  888  .d88P   888   888   Y8888  d8
 #-----------------------------------------------------------------------------------------------------------
 @_rpr_cell = ( me, cell ) ->
   # return '\u3000' if cell is undefined
-  return '〇'     if cell is undefined
-  return '〼'     if cell is null
-  return cell     if TYPES.isa_text cell
+  # return '〼'     if cell is null
+  return me[ 'free_cell_chr' ]  if cell is undefined
+  return cell                   if TYPES.isa_text cell
   return rpr cell
 
 #-----------------------------------------------------------------------------------------------------------

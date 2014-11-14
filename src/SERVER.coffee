@@ -54,7 +54,7 @@ layout                    = TEMPLATES.layout()
 
 #-----------------------------------------------------------------------------------------------------------
 get_doc_updater = ->
-  chrs          = XNCHR.chrs_from_text '畢昇發明活字印|刷術宋沈括著夢溪筆談'
+  chrs          = XNCHR.chrs_from_text '畢昇發明(活字印刷術)宋沈括著夢溪筆談'
   chr_count     = chrs.length
   chr_idx       = null
   doc           = null
@@ -76,23 +76,26 @@ get_doc_updater = ->
         #...................................................................................................
         chr_idx = 0
         doc     = MKTS.new_observable_document handler
+        # doc     = MKTS.new_document()
       #-----------------------------------------------------------------------------------------------------
       when 'next'
-        done = yes
-        loop
+        done = no
+        until done
           chr       = chrs[ chr_idx % chr_count ]
           chr_idx  += 1
+          debug '©0g1', chr
           switch chr
-            when '|'
+            when '('
               MKTS.set_size doc, 2
               MKTS.advance_chr_if_necessary doc, true
               done = no
-              # MKTS.set_size doc, 1
-              # MKTS.compress doc
+            when ')'
+              MKTS.set_size doc, 1
+              MKTS.advance_chr_if_necessary doc, true
+              done = no
             else
-              MKTS.put doc, chr # else '〓'
+              MKTS.put doc, chr
               done = yes
-          break if done
       #-----------------------------------------------------------------------------------------------------
       else
         warn "ignored MKTS command: #{command}"
