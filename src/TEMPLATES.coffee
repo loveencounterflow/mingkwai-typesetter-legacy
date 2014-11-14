@@ -4,7 +4,7 @@
 ############################################################################################################
 TRM                       = require 'coffeenode-trm'
 rpr                       = TRM.rpr.bind TRM
-badge                     = '明快排字机/server'
+badge                     = '明快排字机/TEMPLATES'
 log                       = TRM.get_logger 'plain',     badge
 info                      = TRM.get_logger 'info',      badge
 whisper                   = TRM.get_logger 'whisper',   badge
@@ -13,10 +13,11 @@ debug                     = TRM.get_logger 'debug',     badge
 warn                      = TRM.get_logger 'warn',      badge
 help                      = TRM.get_logger 'help',      badge
 urge                      = TRM.get_logger 'urge',      badge
-BITSNPIECES               = require 'coffeenode-bitsnpieces'
 #...........................................................................................................
+MKTS                      = require './main'
 TEACUP                    = require 'coffeenode-teacup'
-
+STYLUS                    = require 'stylus'
+as_css                    = STYLUS.render.bind STYLUS
 
 #===========================================================================================================
 # TEACUP NAMESPACE ACQUISITION
@@ -25,55 +26,98 @@ for name_ of TEACUP
   eval "#{name_} = TEACUP[ #{rpr name_} ]"
 
 #-----------------------------------------------------------------------------------------------------------
-@main = ( request, response ) ->
+@layout = ->
   #.........................................................................................................
   return render =>
     DOCTYPE 5
     HTML =>
-      #.....................................................................................................
       HEAD =>
-        COMMENT '#head-top'
         META charset: 'utf-8'
         TITLE '明快排字机'
+        LINK rel: 'shortcut icon', href: '/public/favicon.ico?v6'
+        STYLE as_css """
+            body
+              font-family:        'Sun-ExtA'
+              font-size:          200%
+
+            .this-col
+            .this-row
+              background-color:   rgba(227, 166, 81, 0.2)
+
+            .this-cell
+              background-color:   rgba(227, 166, 81, 0.6)
+              border:             3px solid red
+
+            #json-display-doc
+            #json-display-cells
+              border:             1px solid red
+            """
+      #=====================================================================================================
+      BODY =>
+        FORM "#controller", =>
+          BUTTON name: 'record',      '⏺'
+          BUTTON name: 'reset',       '⏮'
+          BUTTON name: 'back',        '⏴'
+          BUTTON name: 'pause',       '⏸'
+          BUTTON name: 'play',        '⏵'
+          BUTTON name: 'next',        '⏯'
+          # BUTTON name: 'previous', "⏯"
+          # BUTTON name: '', "⏭"
+        BR()
+        DIV "#doc-table", =>
+          COMMENT '#{content}'
+        PRE "#json-display-doc", ''
+        PRE "#json-display-cells", ''
+        #===================================================================================================
+        SCRIPT src: 'http://code.jquery.com/jquery-1.11.1.js'
+        SCRIPT src: '/socket.io/socket.io.js'
         COFFEESCRIPT ->
-          #.................................................................................................
-          after = ( seconds, method ) -> setTimeout method, seconds * 1000
-          #.................................................................................................
-          notification_options =
-            sticky: no
-            click:  ( event, notification ) -> notification.close()
-          #.................................................................................................
-          notify = ( title, text ) ->
-            message =
-              title:  title
-              text:   text
-            #...............................................................................................
-            ( $ '#notify-wrap' ).notify 'create',
-              'notify-default'
-              message
-              notification_options
+          log     = console.log.bind console
+          socket  = io()
           #.................................................................................................
           ( $ 'document' ).ready ->
-            ################################################################################################
-            ( $ '#notify-wrap' ).notify
-              speed:    250   # i.e. effect duration
-              expires:  5000  # fades out after so many ms
-            ################################################################################################
-            if ( flash_messages = $.cookie 'flash-messages' )?
-              flash_messages = JSON.parse flash_messages
-              for idx in [ flash_messages.length - 1 .. 0 ] by -1
-                [ title, text, ] = flash_messages[ idx ]
-                notify title, text
-              flash_messages.length = 0
-              $.cookie 'flash-messages', '[]'
             #...............................................................................................
-            # after 0.5, -> notify "Attention Y'All", 'the sublime message is talking to you'
-            # after 1.5, -> notify "Attention Y'All", 'hear hear'
-        #===================================================================================================
-        LINK rel: 'shortcut icon', href: '/public/favicon.ico?v6'
-        COMMENT '#head-bottom'
-      #.....................................................................................................
-      BODY =>
-        COMMENT '#body-top'
-        COMMENT '#body-bottom'
+            ( $ 'button' ).on 'click', ->
+              self = $ @
+              event_type  = 'playback'
+              event_name  = self.attr 'name'
+              socket.emit event_type, event_name
+              return false
+            #...............................................................................................
+            socket.on 'new-table', ( table_html ) ->
+              ( $ '#doc-table' ).html table_html
+            #...............................................................................................
+            socket.on 'change', ( observee, action, target_txt, name, value ) ->
+              log observee, target_txt
+              switch observee
+                when 'doc'
+                  ( $ '#json-display-doc' ).text target_txt, null, '  '
+                when 'cells'
+                  ( $ '#json-display-cells' ).text JSON.stringify value
+            #...............................................................................................
+            ( $ window ).on 'beforeunload', ->
+              socket.close
+            #...............................................................................................
+            log 'ok.'
+            return null
+
+#-----------------------------------------------------------------------------------------------------------
+@doc_table = ( doc ) ->
+  return render =>
+    [ x1, y1, ] = MKTS.get_next_xy doc
+    [ xc, yc, ] = MKTS.xy_from_idx doc, doc[ 'idx' ]
+    TABLE border: 1, =>
+      for y in [ 0 .. y1 ]
+        TR =>
+          for x in [ 0 ... doc[ 'cells_per_line' ] ]
+            cell  = MKTS._get doc, [ x, y, ], undefined
+            cell  = MKTS._rpr_cell doc, cell
+            clasz = []
+            clasz.push '.this-col'   if x is xc
+            clasz.push '.this-row'   if y is yc
+            clasz.push '.this-cell'  if x is xc and y is yc
+            TD ( clasz.join '' ), => cell
+
+
+
 
