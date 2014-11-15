@@ -1,6 +1,6 @@
 {
   "name": "mingkwai-typesetter",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "A Classical Chinese Typewriter / Typesetter for the Digital Age",
   "main": "lib/main.js",
   "scripts": {
