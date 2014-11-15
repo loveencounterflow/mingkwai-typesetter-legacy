@@ -47,6 +47,8 @@ verbose                   = no
     # auto_space_chr:   '＊'
     block_space_chr:  '＃'
     free_cell_chr:    '〇'
+    layout:           'columns'
+    direction:        'rtl'
   return R
 
 #-----------------------------------------------------------------------------------------------------------
@@ -216,6 +218,8 @@ Y88b  d88P Y88b. .d88P 888   "   888 888        888  T88b  888        Y88b  d88P
     auto_space_chr  } = me
   throw new Error "unsupported size #{rpr size} for compress" if size is 1
   #.........................................................................................................
+  return me if idx < 0
+  #.........................................................................................................
   ### Find top and bottom boundaries. ###
   [ x,  y,  ]         = @xy_from_idx  me, idx
   [ y0, y1, ]         = @_get_grid_line_ys me, y, size
@@ -232,6 +236,7 @@ Y88b  d88P Y88b. .d88P 888   "   888 888        888  T88b  888        Y88b  d88P
     ### Walking leftwards until we're at the margin or see a blocking signal to the left: ###
     break if x0 is 0
     break if ( @_get me, [ x0 - 1, y0, ] ) is block_space_chr
+    # break if ( @_get me, [ x0, y0, ] ) is block_space_chr
     x0 -= 1
   #.........................................................................................................
   width               = x1 - x0 + 1
@@ -328,7 +333,7 @@ Y88b  d88P Y88b. .d88P Y88b. .d88P 888  T88b  888  .d88P   888   888   Y8888  d8
 
 #-----------------------------------------------------------------------------------------------------------
 @_rpr_pos   = ( me, pos  ) -> if TYPES.isa_number pos then @_rpr_idx me, pos else @_rpr_xy me, pos
-@_rpr_xy    = ( me, xy   ) -> "@( #{xy[ 0 ]}, #{xy[ 1 ]} )"
+@_rpr_xy    = ( me, xy   ) -> "( x:#{xy[ 0 ]}, y:#{xy[ 1 ]} )"
 @_rpr_idx   = ( me, idx  ) -> @_rpr_xy me, @xy_from_pos me, idx
 
 #-----------------------------------------------------------------------------------------------------------
@@ -336,6 +341,49 @@ Y88b  d88P Y88b. .d88P Y88b. .d88P 888  T88b  888  .d88P   888   888   Y8888  d8
 @_get_xy    = ( me ) -> @xy_from_idx me, me[ 'idx' ]
 @_get_x     = ( me ) -> ( @_get_xy me )[ 0 ]
 @_get_y     = ( me ) -> ( @_get_xy me )[ 1 ]
+
+
+###
+#===========================================================================================================
+
+
+
+8888888 88888888888 8888888888 8888888b.         d8888 88888888888  .d88888b.  8888888b.   .d8888b.
+  888       888     888        888   Y88b       d88888     888     d88P" "Y88b 888   Y88b d88P  Y88b
+  888       888     888        888    888      d88P888     888     888     888 888    888 Y88b.
+  888       888     8888888    888   d88P     d88P 888     888     888     888 888   d88P  "Y888b.
+  888       888     888        8888888P"     d88P  888     888     888     888 8888888P"      "Y88b.
+  888       888     888        888 T88b     d88P   888     888     888     888 888 T88b         "888
+  888       888     888        888  T88b   d8888888888     888     Y88b. .d88P 888  T88b  Y88b  d88P
+8888888     888     8888888888 888   T88b d88P     888     888      "Y88888P"  888   T88b  "Y8888P"
+
+
+
+#===========================================================================================================
+###
+
+
+#-----------------------------------------------------------------------------------------------------------
+@walk = ( me, handler ) ->
+  { cells
+    cells_per_line
+    lines_per_page
+    block_space_chr } = me
+  #.........................................................................................................
+  for content, idx in cells
+    continue if content is block_space_chr
+    continue if content is undefined
+    [ x, y, ] = @xy_from_idx me, idx
+    if TYPES.isa_text content
+      size        = 1
+      content_txt = content
+    else
+      size        = content[ 'size' ]
+      content_txt = content[ 'content' ]
+    handler null, [ 'block', x, y, size, content_txt, ]
+  #.........................................................................................................
+  handler null, [ 'end', ]
+  return me
 
 
 ###
@@ -381,7 +429,7 @@ Y88b  d88P     888     888  T88b  888         d8888888888 888   "   888 Y88b  d8
 @create_readstream = ( me ) ->
   R = P1.create_throughstream()
   R.pause()
-  @walk_in_text_order me, ( error, event ) ->
+  @walk me, ( error, event ) ->
     ### TAINT should respect buffering ###
     ### TAINT how to deal with errors? ###
     throw error if error
@@ -418,8 +466,12 @@ Y88b  d88P     888     888  T88b  888         d8888888888 888   "   888 Y88b  d8
   sizes           = []
   #.........................................................................................................
   advance_later   =           => par_on_next_chr = true
-  advance_now     =           => @advance_column me if par_on_next_chr
-  advance         =           => @advance_column me
+  advance_now     =           =>
+    warn "advance and advance_column not used"
+    # @advance_column me if par_on_next_chr
+  advance         =           =>
+    warn "advance and advance_column not used"
+    # @advance_column me
   get_size        =           => sizes[ sizes.length - 1 ]
   next_odd_int    = ( n )     => ( ( n // 2 ) * 2 ) + 1
   #.........................................................................................................
@@ -428,13 +480,15 @@ Y88b  d88P     888     888  T88b  888         d8888888888 888   "   888 Y88b  d8
     start_size get_size()
   #.........................................................................................................
   start_size = ( size )  =>
-    justify() if size isnt '1' and get_size() is '1'
-    sizes.push size
+    # warn "start_size not used", size, get_size()
     @set_size me, size
+    compress me
+    sizes.push size
   #.........................................................................................................
-  justify = =>
-    debug '©6c1', me[ 'ysc' ], next_odd_int me[ 'y' ]
-    @justify me, me[ 'ysc' ], next_odd_int me[ 'y' ]
+  compress = =>
+    # warn "compress not used"
+    { size } = me
+    @compress me if size isnt 1 and size isnt get_size()
   #.........................................................................................................
   return P1.remit ( event, send, end ) =>
     if is_first_event
@@ -463,15 +517,15 @@ Y88b  d88P     888     888  T88b  888         d8888888888 888   "   888 Y88b  d8
             #...............................................................................................
             when 'span'
               if attributes[ 'class' ]? and ( match = attributes[ 'class' ].match /^size-([0-9]+)$/ )?
-                size = match[ 1 ]
+                size = parseInt match[ 1 ], 10
+                debug '©9v1', event, size
               else
                 size = get_size()
-              debug '©9v1', event
               start_size size
               ok = yes
             #...............................................................................................
             when 'p', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'
-              justify me
+              compress()
               advance() unless is_first_block
               is_first_block  = no
               ok              = yes
@@ -483,7 +537,7 @@ Y88b  d88P     888     888  T88b  888         d8888888888 888   "   888 Y88b  d8
               ok = yes
         #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         when 'end'
-          justify()
+          compress()
           ok = yes
       #.....................................................................................................
       warn "ignored event: #{rpr event}" unless ok
@@ -495,38 +549,6 @@ Y88b  d88P     888     888  T88b  888         d8888888888 888   "   888 Y88b  d8
           end() if event[ 0 ] is 'end'
       #.....................................................................................................
       P1.resume input
-
-# #-----------------------------------------------------------------------------------------------------------
-# @assemble_html_events = ( me, type, tail... ) ->
-#   #.........................................................................................................
-#   switch type
-#     #.......................................................................................................
-#     when 'chr'
-#       #.....................................................................................................
-#     #.......................................................................................................
-#     when 'par'
-#       advance_later()
-#       return me
-#     #.......................................................................................................
-#     when 'cmd'
-#       [ name, parameters..., ] = tail
-#       #.....................................................................................................
-#       switch name
-#         #...................................................................................................
-#         when '1', '2', '3', '4'
-#           @set_size me, parseInt name, 10
-#           advance_now()
-#           @put      me, chr if ( chr = parameters[ 0 ] )?
-#           return me
-#         #...................................................................................................
-#         when '<', 'justify'
-#           ### TAINT must determine scope of justification ###
-#           y = ( ( me[ 'y' ] // 2 ) * 2 ) + 1
-#           @justify me, me[ 'ysc' ], y
-#           return me
-#   #.........................................................................................................
-#   warn "ignoring event #{rpr [ type, tail..., ]}"
-#   return me
 
 #===========================================================================================================
 # MDX PARSER

@@ -54,7 +54,13 @@ layout                    = TEMPLATES.layout()
 
 #-----------------------------------------------------------------------------------------------------------
 get_doc_updater = ->
-  chrs          = XNCHR.chrs_from_text '畢昇發明(活字印刷)術宋沈括著夢溪筆談'
+  chrs          = XNCHR.chrs_from_text """(畢昇發明活字印刷術)
+
+    宋沈括著《夢溪筆談》卷十八記載
+    (版印書籍唐人尚未盛為之)
+    自馮瀛王始印五經已後典籍皆為版本
+    (慶歷中，有布衣畢昇，又為活版。)
+    """.replace /\s+/, ''
   chr_count     = chrs.length
   chr_idx       = null
   doc           = null
