@@ -3,10 +3,17 @@
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd $DIR
 
-node_modules/coffee-script/bin/coffee --watch --output lib --compile src 2>&1 & \
 # node_modules/coffee-script/bin/coffee --watch --output . --compile options.coffee 2>&1 & \
 # nodemon --watch lib --watch gz.de --ext '.js|.ejs|.coffee|.html' lib/main.js
-supervisor --harmony -q --no-restart-on error --watch node_modules,lib --extensions js,coffee,html,json lib/SERVER.js
+
+node_modules/coffee-script/bin/coffee --watch --output lib --compile src 2>&1 &     \
+  supervisor                                                                        \
+    --harmony                                                                       \
+    -q                                                                              \
+    --no-restart-on error                                                           \
+    --watch node_modules,lib,public                                                 \
+    --extensions js,coffee,html,json,css,styl                                       \
+    lib/SERVER.js
 
 
 

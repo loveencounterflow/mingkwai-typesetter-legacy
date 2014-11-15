@@ -2,6 +2,9 @@
 
 
 ############################################################################################################
+njs_path                  = require 'path'
+njs_fs                    = require 'fs'
+#...........................................................................................................
 TRM                       = require 'coffeenode-trm'
 rpr                       = TRM.rpr.bind TRM
 badge                     = '明快排字机/TEMPLATES'
@@ -17,7 +20,11 @@ urge                      = TRM.get_logger 'urge',      badge
 MKTS                      = require './main'
 TEACUP                    = require 'coffeenode-teacup'
 STYLUS                    = require 'stylus'
+#...........................................................................................................
 as_css                    = STYLUS.render.bind STYLUS
+style_route               = njs_path.join __dirname, '../public/mingkwai-typesetter.styl'
+css                       = as_css njs_fs.readFileSync style_route, encoding: 'utf-8'
+
 
 #===========================================================================================================
 # TEACUP NAMESPACE ACQUISITION
@@ -35,38 +42,7 @@ for name_ of TEACUP
         META charset: 'utf-8'
         TITLE '明快排字机'
         LINK rel: 'shortcut icon', href: '/public/favicon.ico?v6'
-        STYLE as_css """
-            body
-              font-family:        'Sun-ExtA'
-              font-size:          200%
-
-            .this-col
-            .this-row
-              background-color:   rgba(227, 166, 81, 0.2)
-
-            .this-cell
-              background-color:   rgba(227, 166, 81, 0.6)
-              border:             1px solid red
-
-            .auto-space
-              background-color:   rgba(150, 50, 50, 0.6)
-            .block-space
-              background-color:   rgba(30, 50, 50, 0.6)
-            .free-cell
-              color:              rgba( 0, 0, 0, 0.3 )
-
-            #json-display-doc
-            #json-display-cells
-              border:             1px solid red
-
-            #doc-table td
-              box-sizing:         border-box
-              -moz-box-sizing:    border-box
-              width:              1.3em
-              height:             1.3em
-              text-align:         center
-              vertical-align:     middle
-            """
+        STYLE css
       #=====================================================================================================
       BODY =>
         FORM "#controller", =>
@@ -79,8 +55,9 @@ for name_ of TEACUP
           # BUTTON name: 'previous', "⏯"
           # BUTTON name: '', "⏭"
         BR()
-        DIV "#doc-table", =>
-          COMMENT '#{content}'
+        DIV "#table-container", =>
+          DIV "#doc-table-plain"
+          DIV "#doc-table-sized"
         PRE "#json-display-doc", ''
         PRE "#json-display-cells", ''
         #===================================================================================================
@@ -99,8 +76,9 @@ for name_ of TEACUP
               socket.emit event_type, event_name
               return false
             #...............................................................................................
-            socket.on 'new-table', ( table_html ) ->
-              ( $ '#doc-table' ).html table_html
+            socket.on 'new-table', ( style, table_html ) ->
+              ( $ "#doc-table-#{style}" ).html table_html
+              ( $ 'html, body' ).stop().animate { scrollTop: ( $ '#bottom' ).offset().top }, 2000
             #...............................................................................................
             socket.on 'change', ( observee, action, target_txt, name, value ) ->
               log observee, target_txt
@@ -115,9 +93,11 @@ for name_ of TEACUP
             #...............................................................................................
             log 'ok.'
             return null
+        #===================================================================================================
+        DIV '#bottom'
 
 #-----------------------------------------------------------------------------------------------------------
-@doc_table = ( doc ) ->
+@doc_table = ( doc, style = 'plain' ) ->
   return render =>
     { auto_space_chr
       block_space_chr
@@ -127,24 +107,54 @@ for name_ of TEACUP
     [ x1, y1, ]         = MKTS.get_next_xy doc
     [ xc, yc, ]         = MKTS.xy_from_idx doc, doc[ 'idx' ]
     #.......................................................................................................
-    TABLE border: 1, =>
-      TH(); TH x for x in [ 0 ... cells_per_line ]; TH()
-      for y in [ 0 .. y1 ]
-        TR =>
-          TH y
-          for x in [ 0 ... cells_per_line ]
-            cell  = MKTS._get doc, [ x, y, ], undefined
-            cell  = MKTS._rpr_cell doc, cell
-            clasz = []
-            clasz.push '.this-col'    if x is xc
-            clasz.push '.this-row'    if y is yc
-            clasz.push '.this-cell'   if x is xc and y is yc
-            clasz.push '.auto-space'  if cell is auto_space_chr
-            clasz.push '.block-space' if cell is block_space_chr
-            clasz.push '.free-cell'   if cell is free_cell_chr
-            TD ( clasz.join '' ), => cell
-          TH y
-      TH(); TH x for x in [ 0 ... cells_per_line ]; TH()
+    switch style
+      #.....................................................................................................
+      when 'plain'
+        TABLE '.doc-table', =>
+          TH(); TH x for x in [ 0 ... cells_per_line ]; TH()
+          for y in [ 0 .. y1 ]
+            TR =>
+              TH y
+              for x in [ 0 ... cells_per_line ]
+                cell      = MKTS._get doc, [ x, y, ], undefined
+                cell_txt  = MKTS._rpr_cell doc, cell
+                clasz     = []
+                clasz.push '.this-col'    if x is xc
+                clasz.push '.this-row'    if y is yc
+                clasz.push '.this-cell'   if x is xc and y is yc
+                clasz.push '.auto-space'  if cell_txt is auto_space_chr
+                clasz.push '.block-space' if cell_txt is block_space_chr
+                clasz.push '.free-cell'   if cell_txt is free_cell_chr
+                TD ( clasz.join '' ), => cell_txt
+              TH y
+          TH(); TH x for x in [ 0 ... cells_per_line ]; TH()
+      #.....................................................................................................
+      when 'sized'
+        TABLE '.doc-table', =>
+          TH(); TH x for x in [ 0 ... cells_per_line ]; TH()
+          for y in [ 0 .. y1 ]
+            TR =>
+              TH y
+              for x in [ 0 ... cells_per_line ]
+                cell            = MKTS._get doc, [ x, y, ], undefined
+                cell_txt        = MKTS._rpr_cell doc, cell
+                continue if cell_txt is block_space_chr
+                size            = cell?[ 'size' ] ? 1
+                Q               = {}
+                Q[ 'rowspan' ]  = Q[ 'colspan' ] = size if size isnt 1
+                clasz           = []
+                clasz.push ".size-#{size}"
+                clasz.push '.this-col'    if x is xc
+                clasz.push '.this-row'    if y is yc
+                clasz.push '.this-cell'   if x is xc and y is yc
+                clasz.push '.auto-space'  if cell_txt is auto_space_chr
+                clasz.push '.free-cell'   if cell_txt is free_cell_chr
+                TD ( clasz.join '' ), Q, => cell_txt
+              TH y
+          TH(); TH x for x in [ 0 ... cells_per_line ]; TH()
+      #.....................................................................................................
+      else
+        throw new Error "unknown table style #{rpr style}"
 
 
 

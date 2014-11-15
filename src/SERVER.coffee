@@ -50,7 +50,7 @@ server                    = ( require 'http'      ).Server app
 sio                       = ( require 'socket.io' ) server
 port                      = 3000
 layout                    = TEMPLATES.layout()
-[ preamble, postscript, ] = layout.split '<!--#{content}-->'
+# [ preamble, postscript, ] = layout.split '<!--#{content}-->'
 
 #-----------------------------------------------------------------------------------------------------------
 get_doc_updater = ->
@@ -59,18 +59,24 @@ get_doc_updater = ->
   chr_idx       = null
   doc           = null
   #.........................................................................................................
-  return ( command, event_emitter ) ->
+  self = ( command, event_emitter ) ->
     #.......................................................................................................
     switch command
+      #-----------------------------------------------------------------------------------------------------
+      when 'play'
+        loop
+          debug chr_idx
+          self 'next', event_emitter
+          break if chr_idx % 5 is 0
       #-----------------------------------------------------------------------------------------------------
       when 'new', 'reset'
         #...................................................................................................
         handler = ( observee, action, target, name, value ) ->
           unless action is 'get'
             # debug target if observee is 'cells'
-            if observee is 'doc'
+            # if observee is 'doc'
               # whisper [ observee, action, target, name, value, ]
-              whisper target[ 'cells' ].join ''
+              # whisper target[ 'cells' ].join ''
             # event_emitter.emit 'change', observee, action, target, name, value if event_emitter?
             ### `JSON.stringify target` strangely causes an `illegal access` error: ###
             target_txt = rpr target
@@ -108,8 +114,10 @@ get_doc_updater = ->
         warn "ignored MKTS command: #{command}"
     #.......................................................................................................
     return doc
+  #.........................................................................................................
+  return self
 
-#---------------------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------------------
 update_doc = get_doc_updater()
 
 #-----------------------------------------------------------------------------------------------------------
@@ -124,12 +132,14 @@ sio.on 'connection', ( socket ) ->
     switch command
       when 'next'   then render command
       when 'reset'  then render command
-      else warn "ignored event: playback/#{command}"
+      when 'play'   then render command
+      else warn "ignored client event: playback/#{command}"
   #.........................................................................................................
   render = ( command ) ->
     doc  ?= update_doc 'new', socket
     doc   = update_doc command
-    sio.emit 'new-table', TEMPLATES.doc_table doc
+    sio.emit 'new-table', 'plain', TEMPLATES.doc_table doc, 'plain'
+    sio.emit 'new-table', 'sized', TEMPLATES.doc_table doc, 'sized'
   #.........................................................................................................
   render 'new'
   return null
@@ -138,9 +148,10 @@ sio.on 'connection', ( socket ) ->
 app.get '/', do =>
   return ( request, response ) =>
     response.writeHead 200, { 'Access-Control-Allow-Origin': '*', }
-    response.write preamble
+    response.write layout
+    # response.write preamble
     # response.write TEMPLATES.doc_table doc
-    response.write postscript
+    # response.write postscript
     response.end()
 
 

@@ -77,6 +77,16 @@ verbose                   = no
   return Proxy R, get_observer 'doc'
 
 #-----------------------------------------------------------------------------------------------------------
+@_new_block = ( me, content ) ->
+  { size, } = me
+  return content if size is 1
+  R =
+    '~isa':   'MINGKWAI/TYPESETTER/block'
+    size:     size
+    content:  content
+  return R
+
+#-----------------------------------------------------------------------------------------------------------
 @_get = ( me, pos, fallback ) ->
   idx = @idx_from_pos me, pos
   R = me[ 'cells' ][ idx ]
@@ -103,7 +113,7 @@ verbose                   = no
     block_space_chr }   = me
   [ x0, y0, ]           = @_get_xy me
   #.........................................................................................................
-  @_set me, idx, content
+  @_set me, idx, @_new_block me, content
   #.........................................................................................................
   for dx in [ 0 ... size ]
     for dy in [ 0 ... size ]
@@ -222,23 +232,38 @@ Y88b  d88P Y88b. .d88P 888   "   888 888        888  T88b  888        Y88b  d88P
   #.........................................................................................................
   width               = x1 - x0 + 1
   height              = size
-  chr_count           = ( Math.max 0, y - y0 - 1 ) * width + x
+  chr_count           = ( Math.max 0, y - y0 ) * width + ( x - x0 )
   blank_count         = chr_count %% height
   blank_count         = height - blank_count if blank_count > 0
+  cell_count          = chr_count + blank_count
   idx0                = @idx_from_xy me, [ x0, y0, ]
-  tmp_cells_per_line  = ( chr_count + blank_count ) / height
-  tmp_cells           = cells.splice idx0, chr_count
-  me[ 'idx' ]         = idx0 + tmp_cells_per_line
+  tmp_cells_per_line  = cell_count / height
+  # tmp_cells           = cells.splice idx0, chr_count
+  tmp_cells           = []
+  for doc_y in [ y0 .. y1 ]
+    for doc_x in [ x0 .. x1 ]
+      doc_idx           = @idx_from_xy me, [ doc_x, doc_y, ]
+      cell              = cells[ doc_idx ]
+      tmp_cells.push cell if cell?
+      debug doc_idx, [ doc_x, doc_y, ], cell, cells
+      cells[ doc_idx ]  = undefined
   tmp_cells.push auto_space_chr for d in [ 0 ... blank_count ]
+  me[ 'idx' ]         = idx0 + tmp_cells_per_line
+  debug 'chr_count          ', chr_count
+  debug 'blank_count        ', blank_count
+  debug 'height             ', height
+  debug 'tmp_cells_per_line ', tmp_cells_per_line
+  debug 'tmp_cells          ', tmp_cells
   #.........................................................................................................
   for tmp_cell, tmp_idx in tmp_cells
     [ dx, dy, ]   = @xy_from_idx null, tmp_idx, tmp_cells_per_line
+    debug tmp_cell, tmp_idx, [ dx, dy, ], [ x0, y0, ], [ x0 + dx, y0 + dy, ]
     idx1          = @idx_from_xy me, [ x0 + dx, y0 + dy, ]
     cells[ idx1 ] = tmp_cell
   #.........................................................................................................
-  # debug """
-  #   compressing #{@_rpr_xy me, [ x0, y0, ]} .. #{@_rpr_xy me, [ x1, y1, ]}
-  #   with #{chr_count} chrs and #{blank_count} blanks"""
+  debug """
+    compressing #{@_rpr_xy me, [ x0, y0, ]} .. #{@_rpr_xy me, [ x1, y1, ]}
+    with #{chr_count} chrs and #{blank_count} blanks"""
   return me
 
 
@@ -345,10 +370,10 @@ Y88b  d88P Y88b. .d88P Y88b. .d88P 888  T88b  888  .d88P   888   888   Y8888  d8
 
 #-----------------------------------------------------------------------------------------------------------
 @_rpr_cell = ( me, cell ) ->
-  # return '\u3000' if cell is undefined
-  # return '〼'     if cell is null
-  return me[ 'free_cell_chr' ]  if cell is undefined
-  return cell                   if TYPES.isa_text cell
+  switch type = TYPES.type_of cell
+    when 'jsundefined'                then return me[ 'free_cell_chr' ]
+    when 'text'                       then return cell
+    when 'MINGKWAI/TYPESETTER/block'  then return cell[ 'content' ]
   return rpr cell
 
 #-----------------------------------------------------------------------------------------------------------
