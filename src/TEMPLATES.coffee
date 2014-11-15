@@ -87,9 +87,9 @@ for name_ of TEACUP
                 #   ( $ '#json-display-doc' ).text target_txt, null, '  '
                 when 'cells'
                   ( $ '#json-display-cells' ).text JSON.stringify value
-            #...............................................................................................
-            ( $ window ).on 'beforeunload', ->
-              socket.close
+            # #...............................................................................................
+            # ( $ window ).on 'beforeunload', ->
+            #   socket.close
             #...............................................................................................
             log 'ok.'
             return null

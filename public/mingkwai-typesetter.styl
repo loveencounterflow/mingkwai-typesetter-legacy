@@ -9,21 +9,6 @@ body
   flex-wrap:          wrap
   justify-content:    center
 
-.this-col
-.this-row
-  background-color:   rgba(227, 166, 81, 0.2)
-
-.this-cell
-  background-color:   rgba(227, 166, 81, 0.6)
-  border:             1px solid red
-
-.auto-space
-  background-color:   rgba(150, 50, 50, 0.6)
-.block-space
-  background-color:   rgba(30, 50, 50, 0.6)
-.free-cell
-  color:              rgba( 0, 0, 0, 0.3 )
-
 #json-display-doc
 #json-display-cells
   border:             1px solid red
@@ -35,15 +20,7 @@ body
 
 .doc-table
   border-collapse:    collapse
-
-.doc-table td
-  box-sizing:         border-box
-  -moz-box-sizing:    border-box
-  width:              1.3em
-  height:             1.3em
-  text-align:         center
-  vertical-align:     middle
-  border: 1px solid rgba( 0, 0, 0, 0.3 )
+  border-spacing:     0px
 
 .size-1
   font-size:          100%
@@ -56,5 +33,38 @@ body
 
 #controller
   position:           fixed
+
+.doc-table td
+  box-sizing:         border-box
+  -moz-box-sizing:    border-box
+  width:              1.3em
+  height:             1.3em
+  text-align:         center
+  vertical-align:     middle
+  border:             1px solid rgba( 0, 0, 0, 0.3 )
+
+.doc-table td
+  background: rgba(255,255,255,1);
+  background: -moz-linear-gradient(-45deg, rgba(255,255,255,1) 0%, rgba(241,245,249,1) 50%, rgba(241,245,249,1) 100%);
+  background: -webkit-gradient(left top, right bottom, color-stop(0%, rgba(255,255,255,1)), color-stop(50%, rgba(241,245,249,1)), color-stop(100%, rgba(241,245,249,1)));
+  background: -webkit-linear-gradient(-45deg, rgba(255,255,255,1) 0%, rgba(241,245,249,1) 50%, rgba(241,245,249,1) 100%);
+  background: -o-linear-gradient(-45deg, rgba(255,255,255,1) 0%, rgba(241,245,249,1) 50%, rgba(241,245,249,1) 100%);
+  background: -ms-linear-gradient(-45deg, rgba(255,255,255,1) 0%, rgba(241,245,249,1) 50%, rgba(241,245,249,1) 100%);
+  background: linear-gradient(135deg, rgba(255,255,255,1) 0%, rgba(241,245,249,1) 50%, rgba(241,245,249,1) 100%);
+
+.doc-table td.this-col
+.doc-table td.this-row
+  background-color:   rgba( 227, 166,  81, 0.1 )
+
+.doc-table td.this-cell
+  background-color:   rgba( 227, 0, 5, 0.1 )
+  // border:             1px solid red
+  outline:            3px solid rgba( 115, 185, 0, 0.8 )
+  // outline-style:      inset
+  outline-offset:     -3px
+
+.doc-table td.auto-space  { background-color:   rgba(   5,  14,  150,  0.05 ) }
+.doc-table td.block-space { background-color:   rgba(  30,  50,   50,  0.6 ) }
+.doc-table td.free-cell   { color:              rgba(   0,   0,    0,  0.1 ) }
 
 

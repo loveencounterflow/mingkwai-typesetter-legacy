@@ -54,7 +54,7 @@ layout                    = TEMPLATES.layout()
 
 #-----------------------------------------------------------------------------------------------------------
 get_doc_updater = ->
-  chrs          = XNCHR.chrs_from_text '畢昇發明活(字印刷術)宋沈括著夢溪筆談'
+  chrs          = XNCHR.chrs_from_text '畢昇發明(活字印刷)術宋沈括著夢溪筆談'
   chr_count     = chrs.length
   chr_idx       = null
   doc           = null
@@ -95,14 +95,14 @@ get_doc_updater = ->
           debug '©0g1', chr
           switch chr
             when '('
-              MKTS.set_size doc, 3
+              MKTS.set_size doc, 4
               MKTS.compress doc
-              MKTS.advance_chr_if_necessary doc, true
+              # MKTS.advance_chr_if_necessary doc, true
               # done = no
               done = yes
             when ')'
               MKTS.set_size doc, 1
-              MKTS.advance_chr_if_necessary doc, true
+              # MKTS.advance_chr_if_necessary doc, true
               # done = no
               done = yes
             else
