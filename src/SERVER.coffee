@@ -54,7 +54,7 @@ layout                    = TEMPLATES.layout()
 
 #-----------------------------------------------------------------------------------------------------------
 get_doc_updater = ->
-  chrs          = XNCHR.chrs_from_text '畢昇發明(活字印刷術)宋沈括著夢溪筆談'
+  chrs          = XNCHR.chrs_from_text '畢昇發明活(字印刷術)宋沈括著夢溪筆談'
   chr_count     = chrs.length
   chr_idx       = null
   doc           = null
@@ -67,7 +67,10 @@ get_doc_updater = ->
         #...................................................................................................
         handler = ( observee, action, target, name, value ) ->
           unless action is 'get'
-            whisper [ observee, action, target, name, value, ]
+            # debug target if observee is 'cells'
+            if observee is 'doc'
+              # whisper [ observee, action, target, name, value, ]
+              whisper target[ 'cells' ].join ''
             # event_emitter.emit 'change', observee, action, target, name, value if event_emitter?
             ### `JSON.stringify target` strangely causes an `illegal access` error: ###
             target_txt = rpr target
@@ -86,18 +89,22 @@ get_doc_updater = ->
           debug '©0g1', chr
           switch chr
             when '('
-              MKTS.set_size doc, 2
+              MKTS.set_size doc, 3
+              MKTS.compress doc
               MKTS.advance_chr_if_necessary doc, true
-              done = no
+              # done = no
+              done = yes
             when ')'
               MKTS.set_size doc, 1
               MKTS.advance_chr_if_necessary doc, true
-              done = no
+              # done = no
+              done = yes
             else
               MKTS.put doc, chr
               done = yes
       #-----------------------------------------------------------------------------------------------------
       else
+        # throw new Error 'xxx' if command is undefined
         warn "ignored MKTS command: #{command}"
     #.......................................................................................................
     return doc
@@ -124,7 +131,7 @@ sio.on 'connection', ( socket ) ->
     doc   = update_doc command
     sio.emit 'new-table', TEMPLATES.doc_table doc
   #.........................................................................................................
-  render()
+  render 'new'
   return null
 
 #---------------------------------------------------------------------------------------------------------

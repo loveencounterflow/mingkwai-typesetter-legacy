@@ -73,7 +73,7 @@ verbose                   = no
     return S
   #.........................................................................................................
   R             = @new_document settings
-  R[ 'cells' ]  = Proxy R[ 'cells' ], get_observer 'cells'
+  # R[ 'cells' ]  = Proxy R[ 'cells' ], get_observer 'cells'
   return Proxy R, get_observer 'doc'
 
 #-----------------------------------------------------------------------------------------------------------
@@ -112,6 +112,7 @@ verbose                   = no
   #.........................................................................................................
   return @advance_chr me
 
+### TAINT next two methods have a lot of duplicated code ###
 #-----------------------------------------------------------------------------------------------------------
 @advance_chr = ( me ) ->
   { size, cells, } = me
@@ -193,11 +194,51 @@ Y88b  d88P Y88b. .d88P 888   "   888 888        888  T88b  888        Y88b  d88P
 
 #-----------------------------------------------------------------------------------------------------------
 @compress = ( me ) ->
-  { size, idx, }  = me
-  throw new Error "unsupported size #{rpr size} for compress" unless size > 1
-  [ _, y, ]       = @xy_from_idx  me, idx
-  [ y0, y1, ]     = @_get_grid_line_ys me, y, size
-  debug "compressing lines #{y0} .. #{y1}"
+  { size
+    idx
+    cells
+    cells_per_line
+    block_space_chr
+    auto_space_chr  } = me
+  throw new Error "unsupported size #{rpr size} for compress" if size is 1
+  #.........................................................................................................
+  ### Find top and bottom boundaries. ###
+  [ x,  y,  ]         = @xy_from_idx  me, idx
+  [ y0, y1, ]         = @_get_grid_line_ys me, y, size
+  #.........................................................................................................
+  ### Find left and right boundaries. ###
+  ### If we're on the first line of the compressible region, we're already behind the last compressible
+    position; if we're on any following line, the first line must be full, so `x1` is the line cellcount
+    minus one: ###
+  x1 = if y is y0 then Math.max 0, x - 1 else cells_per_line - 1
+  #.........................................................................................................
+  ### Since we don't support ragged left borders, all lines must start at the same index `x0`. ###
+  x0 = x
+  loop
+    ### Walking leftwards until we're at the margin or see a blocking signal to the left: ###
+    break if x0 is 0
+    break if ( @_get me, [ x0 - 1, y0, ] ) is block_space_chr
+    x0 -= 1
+  #.........................................................................................................
+  width               = x1 - x0 + 1
+  height              = size
+  chr_count           = ( Math.max 0, y - y0 - 1 ) * width + x
+  blank_count         = chr_count %% height
+  blank_count         = height - blank_count if blank_count > 0
+  idx0                = @idx_from_xy me, [ x0, y0, ]
+  tmp_cells_per_line  = ( chr_count + blank_count ) / height
+  tmp_cells           = cells.splice idx0, chr_count
+  me[ 'idx' ]         = idx0 + tmp_cells_per_line
+  tmp_cells.push auto_space_chr for d in [ 0 ... blank_count ]
+  #.........................................................................................................
+  for tmp_cell, tmp_idx in tmp_cells
+    [ dx, dy, ]   = @xy_from_idx null, tmp_idx, tmp_cells_per_line
+    idx1          = @idx_from_xy me, [ x0 + dx, y0 + dy, ]
+    cells[ idx1 ] = tmp_cell
+  #.........................................................................................................
+  # debug """
+  #   compressing #{@_rpr_xy me, [ x0, y0, ]} .. #{@_rpr_xy me, [ x1, y1, ]}
+  #   with #{chr_count} chrs and #{blank_count} blanks"""
   return me
 
 
@@ -230,9 +271,8 @@ Y88b  d88P Y88b. .d88P Y88b. .d88P 888  T88b  888  .d88P   888   888   Y8888  d8
   return y * cells_per_line + x
 
 #-----------------------------------------------------------------------------------------------------------
-@xy_from_idx = ( me, idx ) ->
-  { cells_per_line,
-    lines_per_page, } = me
+@xy_from_idx = ( me, idx, cells_per_line ) ->
+  cells_per_line ?= me[ 'cells_per_line' ]
   return [ idx %% cells_per_line, idx // cells_per_line, ]
 
 #-----------------------------------------------------------------------------------------------------------

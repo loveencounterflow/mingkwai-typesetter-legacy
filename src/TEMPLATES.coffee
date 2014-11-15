@@ -46,7 +46,7 @@ for name_ of TEACUP
 
             .this-cell
               background-color:   rgba(227, 166, 81, 0.6)
-              border:             3px solid red
+              border:             1px solid red
 
             .auto-space
               background-color:   rgba(150, 50, 50, 0.6)
@@ -128,8 +128,10 @@ for name_ of TEACUP
     [ xc, yc, ]         = MKTS.xy_from_idx doc, doc[ 'idx' ]
     #.......................................................................................................
     TABLE border: 1, =>
+      TH(); TH x for x in [ 0 ... cells_per_line ]; TH()
       for y in [ 0 .. y1 ]
         TR =>
+          TH y
           for x in [ 0 ... cells_per_line ]
             cell  = MKTS._get doc, [ x, y, ], undefined
             cell  = MKTS._rpr_cell doc, cell
@@ -141,6 +143,8 @@ for name_ of TEACUP
             clasz.push '.block-space' if cell is block_space_chr
             clasz.push '.free-cell'   if cell is free_cell_chr
             TD ( clasz.join '' ), => cell
+          TH y
+      TH(); TH x for x in [ 0 ... cells_per_line ]; TH()
 
 
 
