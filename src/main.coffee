@@ -48,6 +48,7 @@ verbose                   = no
   R[ 'free_cell_chr'  ] = settings[ 'free-cell-chr'   ] ? '〇'
   R[ 'layout'         ] = settings[ 'layout'          ] ? 'rows'
   R[ 'direction'      ] = settings[ 'direction'       ] ? 'ltr'
+  throw new Error "`keep_x_grid` not implemented" if R[ 'keep_x_grid' ]
   return R
 
 #-----------------------------------------------------------------------------------------------------------
@@ -272,7 +273,6 @@ Y88b  d88P Y88b. .d88P 888   "   888 888        888  T88b  888        Y88b  d88P
       tmp_cells.push cell if cell?
       cells[ doc_idx ]  = undefined
   tmp_cells.push auto_space_chr for d in [ 0 ... blank_count ]
-  info '©6r1', tmp_cells
   #.........................................................................................................
   me[ 'idx' ]         = idx0 + tmp_cells_per_line - 1
   #.........................................................................................................
@@ -337,8 +337,16 @@ Y88b  d88P Y88b. .d88P Y88b. .d88P 888  T88b  888  .d88P   888   888   Y8888  d8
   [ x, y, ]     = xy
   page_idx      = y // lines_per_page
   y             = y %% lines_per_page
-  [ col, row, ] = if layout is 'rows' then [ x, y, ] else [ y, x, ]
-  col           = cells_per_line - col - ( size - 1 ) if direction is 'rtl'
+  #.........................................................................................................
+  if layout is 'rows'
+    [ col, row, ] = [ x, y, ]
+    width         = cells_per_line
+  #.........................................................................................................
+  else
+    [ col, row, ] = [ y, x, ]
+    width         = lines_per_page
+  #.........................................................................................................
+  col           = width - col - ( size - 1 ) if direction is 'rtl'
   return [ page_idx, col, row, ]
 
 #-----------------------------------------------------------------------------------------------------------
@@ -560,7 +568,6 @@ Y88b  d88P     888     888  T88b  888         d8888888888 888   "   888 Y88b  d8
             when 'span'
               if attributes[ 'class' ]? and ( match = attributes[ 'class' ].match /^size-([0-9]+)$/ )?
                 size = parseInt match[ 1 ], 10
-                debug '©9v1', event, size
               else
                 size = get_size()
               start_size size
