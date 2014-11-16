@@ -137,8 +137,9 @@ for name_ of TEACUP
               TH y
               for x in [ 0 ... cells_per_line ]
                 cell            = MKTS._get doc, [ x, y, ], undefined
+                # continue if cell is undefined
+                continue if cell is MKTS.blockade
                 cell_txt        = MKTS._rpr_cell doc, cell
-                continue if cell_txt is block_space_chr
                 size            = cell?[ 'size' ] ? 1
                 Q               = {}
                 Q[ 'rowspan' ]  = Q[ 'colspan' ] = size if size isnt 1

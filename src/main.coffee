@@ -33,10 +33,10 @@ P1                        = require 'pipedreams'
 verbose                   = yes
 verbose                   = no
 
-
 #-----------------------------------------------------------------------------------------------------------
 @new_document = ( settings ) ->
   R =
+    '~isa':   'MINGKWAI/TYPESETTER/document'
     keep_x_grid:      no
     cells:            []
     cells_per_line:   8
@@ -45,10 +45,12 @@ verbose                   = no
     size:             1
     auto_space_chr:   '\u3000'
     # auto_space_chr:   '＊'
-    block_space_chr:  '＃'
+    blockade_chr:     '＃'
     free_cell_chr:    '〇'
-    layout:           'columns'
-    direction:        'rtl'
+    # layout:           'columns'
+    # direction:        'rtl'
+    layout:           'rows'
+    direction:        'ltr'
   return R
 
 #-----------------------------------------------------------------------------------------------------------
@@ -89,6 +91,9 @@ verbose                   = no
   return R
 
 #-----------------------------------------------------------------------------------------------------------
+@blockade = { '~isa':   'MINGKWAI/TYPESETTER/blockade' }
+
+#-----------------------------------------------------------------------------------------------------------
 @_get = ( me, pos, fallback ) ->
   idx = @idx_from_pos me, pos
   R = me[ 'cells' ][ idx ]
@@ -113,7 +118,7 @@ verbose                   = no
   { idx
     size
     cells
-    block_space_chr }   = me
+    blockade_chr }      = me
   [ x0, y0, ]           = @_get_xy me
   #.........................................................................................................
   @_set me, idx, @_new_block me, content
@@ -121,7 +126,7 @@ verbose                   = no
   for dx in [ 0 ... size ]
     for dy in [ 0 ... size ]
       continue if dx is dy is 0
-      cells[ @idx_from_xy me, [ x0 + dx, y0 + dy, ] ] = block_space_chr
+      cells[ @idx_from_xy me, [ x0 + dx, y0 + dy, ] ] = @blockade
   #.........................................................................................................
   return me
 
@@ -209,16 +214,30 @@ Y88b  d88P Y88b. .d88P 888   "   888 888        888  T88b  888        Y88b  d88P
   return me
 
 #-----------------------------------------------------------------------------------------------------------
+@size_of = ( me, pos ) ->
+  cell = me[ 'cells' ][ @idx_from_pos me, pos ]
+  ### TAINT it could be argued that the size of any blockaded cell is the size of the block that caused the
+    blackade ###
+  switch type = TYPES.type_of cell
+    when 'text' then return 1
+    when 'MINGKWAI/TYPESETTER/block' then return cell[ 'size' ]
+    # when 'jsundefined', 'MINGKWAI/TYPESETTER/blockade'
+    else throw new Error "unable to determine size for cell of type #{rpr type}"
+
+#-----------------------------------------------------------------------------------------------------------
 @compress = ( me ) ->
   { size
     idx
     cells
     cells_per_line
-    block_space_chr
+    blockade_chr
     auto_space_chr  } = me
   throw new Error "unsupported size #{rpr size} for compress" if size is 1
   #.........................................................................................................
+  ### Don't do anything if we're at the start of the document: ###
   return me if idx < 0
+  ### Don't do anything if the current character isn't a size 1 character: ###
+  return me unless ( @size_of me, idx ) is 1
   #.........................................................................................................
   ### Find top and bottom boundaries. ###
   [ x,  y,  ]         = @xy_from_idx  me, idx
@@ -235,8 +254,8 @@ Y88b  d88P Y88b. .d88P 888   "   888 888        888  T88b  888        Y88b  d88P
   loop
     ### Walking leftwards until we're at the margin or see a blocking signal to the left: ###
     break if x0 is 0
-    break if ( @_get me, [ x0 - 1, y0, ] ) is block_space_chr
-    # break if ( @_get me, [ x0, y0, ] ) is block_space_chr
+    break if ( @_get me, [ x0 - 1, y0, ] ) is @blockade
+    # break if ( @_get me, [ x0, y0, ] ) is @blockade
     x0 -= 1
   #.........................................................................................................
   width               = x1 - x0 + 1
@@ -256,6 +275,7 @@ Y88b  d88P Y88b. .d88P 888   "   888 888        888  T88b  888        Y88b  d88P
       tmp_cells.push cell if cell?
       cells[ doc_idx ]  = undefined
   tmp_cells.push auto_space_chr for d in [ 0 ... blank_count ]
+  info '©6r1', tmp_cells
   #.........................................................................................................
   me[ 'idx' ]         = idx0 + tmp_cells_per_line - 1
   #.........................................................................................................
@@ -310,6 +330,19 @@ Y88b  d88P Y88b. .d88P Y88b. .d88P 888  T88b  888  .d88P   888   888   Y8888  d8
 @xy_from_pos = ( me, pos ) ->
   return pos if TYPES.isa_list pos
   return @xy_from_idx me, pos
+
+#-----------------------------------------------------------------------------------------------------------
+@pcr_from_xy = ( me, xy ) ->
+  { cells_per_line
+    lines_per_page
+    layout
+    direction } = me
+  [ x, y, ]     = xy
+  page_idx      = y // lines_per_page
+  y             = y %% lines_per_page
+  [ col, row, ] = if layout is 'rows' then [ x, y, ] else [ y, x, ]
+  col           = cells_per_line - col if direction is 'rtl'
+  return [ page_idx, col, row, ]
 
 #-----------------------------------------------------------------------------------------------------------
 @get_next_idx = ( me ) ->
@@ -368,19 +401,31 @@ Y88b  d88P Y88b. .d88P Y88b. .d88P 888  T88b  888  .d88P   888   888   Y8888  d8
   { cells
     cells_per_line
     lines_per_page
-    block_space_chr } = me
+    blockade_chr    } = me
+  last_page_idx       = null
   #.........................................................................................................
   for content, idx in cells
-    continue if content is block_space_chr
-    continue if content is undefined
-    [ x, y, ] = @xy_from_idx me, idx
-    if TYPES.isa_text content
-      size        = 1
-      content_txt = content
-    else
-      size        = content[ 'size' ]
-      content_txt = content[ 'content' ]
-    handler null, [ 'block', x, y, size, content_txt, ]
+    switch type = TYPES.type_of content
+      when 'jsundefined', 'MINGKWAI/TYPESETTER/blockade'
+        continue
+      when 'text'
+        size        = 1
+        content_txt = content
+      when 'MINGKWAI/TYPESETTER/block'
+        size        = content[ 'size' ]
+        content_txt = content[ 'content' ]
+      else
+        throw new Error "unknown type #{rpr type}"
+    #.......................................................................................................
+    xy        = @xy_from_idx me, idx
+    pcr       = @pcr_from_xy me, xy
+    page_idx  = pcr[ 0 ]
+    #.......................................................................................................
+    if page_idx isnt last_page_idx
+      handler null, [ 'page', page_idx, ]
+      last_page_idx = page_idx
+    #.......................................................................................................
+    handler null, [ 'block', xy, pcr, size, content_txt, ]
   #.........................................................................................................
   handler null, [ 'end', ]
   return me
@@ -654,9 +699,10 @@ Y88b  d88P     888     888  T88b  888         d8888888888 888   "   888 Y88b  d8
 #-----------------------------------------------------------------------------------------------------------
 @_rpr_cell = ( me, cell ) ->
   switch type = TYPES.type_of cell
-    when 'jsundefined'                then return me[ 'free_cell_chr' ]
-    when 'text'                       then return cell
-    when 'MINGKWAI/TYPESETTER/block'  then return cell[ 'content' ]
+    when 'jsundefined'                    then return me[ 'free_cell_chr' ]
+    when 'MINGKWAI/TYPESETTER/blockade'   then return me[ 'blockade_chr' ]
+    when 'MINGKWAI/TYPESETTER/block'      then return cell[ 'content' ]
+    when 'text'                           then return cell
   return rpr cell
 
 #-----------------------------------------------------------------------------------------------------------
