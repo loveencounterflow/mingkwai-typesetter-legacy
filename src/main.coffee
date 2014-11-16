@@ -34,23 +34,20 @@ verbose                   = yes
 verbose                   = no
 
 #-----------------------------------------------------------------------------------------------------------
-@new_document = ( settings ) ->
+@new_document = ( settings = {} ) ->
   R =
     '~isa':   'MINGKWAI/TYPESETTER/document'
-    keep_x_grid:      no
     cells:            []
-    cells_per_line:   8
-    lines_per_page:   6
     idx:              -1 # next glyph position
     size:             1
-    auto_space_chr:   '\u3000'
-    # auto_space_chr:   '＊'
-    blockade_chr:     '＃'
-    free_cell_chr:    '〇'
-    # layout:           'columns'
-    # direction:        'rtl'
-    layout:           'rows'
-    direction:        'ltr'
+  R[ 'keep_x_grid'    ] = settings[ 'keep_x_grid'     ] ? no
+  R[ 'cells_per_line' ] = settings[ 'cells-per-line'  ] ? 8
+  R[ 'lines_per_page' ] = settings[ 'lines-per-page'  ] ? 6
+  R[ 'auto_space_chr' ] = settings[ 'auto-space-chr'  ] ? '\u3000'
+  R[ 'blockade_chr'   ] = settings[ 'blockade-chr'    ] ? '＃'
+  R[ 'free_cell_chr'  ] = settings[ 'free-cell-chr'   ] ? '〇'
+  R[ 'layout'         ] = settings[ 'layout'          ] ? 'rows'
+  R[ 'direction'      ] = settings[ 'direction'       ] ? 'ltr'
   return R
 
 #-----------------------------------------------------------------------------------------------------------
@@ -332,7 +329,7 @@ Y88b  d88P Y88b. .d88P Y88b. .d88P 888  T88b  888  .d88P   888   888   Y8888  d8
   return @xy_from_idx me, pos
 
 #-----------------------------------------------------------------------------------------------------------
-@pcr_from_xy = ( me, xy ) ->
+@pcr_from_xy = ( me, xy, size = 1 ) ->
   { cells_per_line
     lines_per_page
     layout
@@ -341,7 +338,7 @@ Y88b  d88P Y88b. .d88P Y88b. .d88P 888  T88b  888  .d88P   888   888   Y8888  d8
   page_idx      = y // lines_per_page
   y             = y %% lines_per_page
   [ col, row, ] = if layout is 'rows' then [ x, y, ] else [ y, x, ]
-  col           = cells_per_line - col if direction is 'rtl'
+  col           = cells_per_line - col - ( size - 1 ) if direction is 'rtl'
   return [ page_idx, col, row, ]
 
 #-----------------------------------------------------------------------------------------------------------
@@ -418,7 +415,7 @@ Y88b  d88P Y88b. .d88P Y88b. .d88P 888  T88b  888  .d88P   888   888   Y8888  d8
         throw new Error "unknown type #{rpr type}"
     #.......................................................................................................
     xy        = @xy_from_idx me, idx
-    pcr       = @pcr_from_xy me, xy
+    pcr       = @pcr_from_xy me, xy, size
     page_idx  = pcr[ 0 ]
     #.......................................................................................................
     if page_idx isnt last_page_idx
