@@ -40,10 +40,10 @@ options =
   R                     = '~isa': 'MINGKWAI/PLOTTER/image'
   R[ 'route'          ] = route ? settings?[ 'route' ] ? TEMP.path { suffix: '.png'}
   R[ 'px-per-mm'      ] = settings?[ 'px-per-mm'      ] ? 15
-  R[ 'width'          ] = settings?[ 'width'          ] ? 243
-  R[ 'height'         ] = settings?[ 'height'         ] ? 183 - 5
+  R[ 'width'          ] = settings?[ 'width'          ] ? 297 - 29 - 25
+  R[ 'height'         ] = settings?[ 'height'         ] ? 210 - 11 - 12 - 5
   R[ 'colors'         ] = colors = []
-  R[ 'tex'            ] = "\\includegraphics[width=#{R[ 'width' ]}mm]{#{R[ 'route' ]}}}"
+  R[ 'tex'            ] = "\\includegraphics[width=#{R[ 'width' ]}mm]{#{R[ 'route' ]}}"
   colors[ 'red'       ] = settings?[ 'colors' ]?[ 'red'    ] ? '#86000b'
   colors[ 'blue'      ] = settings?[ 'colors' ]?[ 'blue'   ] ? '#21247b'
   colors[ 'black'     ] = settings?[ 'colors' ]?[ 'black'  ] ? '#000000'
@@ -96,8 +96,9 @@ options =
 
 
 ############################################################################################################
-@main null, ( error ) ->
-  throw error if error?
-  help 'ok'
+unless module.parent?
+  @main null, ( error ) ->
+    throw error if error?
+    help 'ok'
 
 
