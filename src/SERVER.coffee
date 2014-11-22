@@ -60,10 +60,13 @@ get_doc_updater = ->
     (版印書籍唐人尚未盛為之)
     自馮瀛王始印五經已後典籍皆為版本
     (慶歷中有布衣畢昇又為活版)
-    """.replace /\s+/g, ''
+    """#.replace /\s+/g, ''
+  # debug '©Jq7C9', rpr chrs
   chr_count     = chrs.length
   chr_idx       = null
   doc           = null
+  nl_state      = 'none' # 'pending', 'ignore'
+  last_size     = 1
   #.........................................................................................................
   self = ( command, event_emitter ) ->
     #.......................................................................................................
@@ -78,11 +81,6 @@ get_doc_updater = ->
         #...................................................................................................
         handler = ( observee, action, target, name, value ) ->
           unless action is 'get'
-            # debug target if observee is 'cells'
-            # if observee is 'doc'
-              # whisper [ observee, action, target, name, value, ]
-              # whisper target[ 'cells' ].join ''
-            # event_emitter.emit 'change', observee, action, target, name, value if event_emitter?
             ### `JSON.stringify target` strangely causes an `illegal access` error: ###
             target_txt = rpr target
             event_emitter.emit 'change', observee, action, target_txt, name, value if event_emitter?
@@ -90,29 +88,48 @@ get_doc_updater = ->
         #...................................................................................................
         chr_idx = 0
         doc     = MKTS.new_observable_document handler
-        # doc     = MKTS.new_document()
       #-----------------------------------------------------------------------------------------------------
       when 'next'
         done = no
         until done
+          MKTS.advance_page doc if chr_idx % chr_count is 0 # ??????????
           chr       = chrs[ chr_idx % chr_count ]
           chr_idx  += 1
+          nl_state  = 'none' if chr isnt '\n'
+          #.................................................................................................
           switch chr
+            #...............................................................................................
+            when '\n'
+              switch nl_state
+                when 'none'
+                  nl_state = 'pending'
+                when 'pending'
+                  # debug '©OKr1W', 'last_size', last_size
+                  MKTS.advance_line doc, last_size
+                  nl_state = 'ignore'
+                when 'ignore'
+                  null
+                else
+                  throw new Error "unknown newline state #{rpr nl_state}"
+            #...............................................................................................
             when '('
               MKTS.set_size doc, 2
               MKTS.compress doc
               # MKTS.advance_chr_if_necessary doc, true
               # done = no
               done = yes
+            #...............................................................................................
             when ')'
               MKTS.set_size doc, 1
               # MKTS.advance_chr_if_necessary doc, true
               # done = no
               done = yes
+            #...............................................................................................
             else
+              last_size = doc[ 'size' ]
               MKTS.put doc, chr
               done = yes
-          debug '©0g1', chr, doc
+          # debug '©0g1', chr, doc
       #-----------------------------------------------------------------------------------------------------
       else
         # throw new Error 'xxx' if command is undefined

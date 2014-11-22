@@ -102,7 +102,8 @@ for name_ of TEACUP
     { auto_space_chr
       block_space_chr
       free_cell_chr
-      cells_per_line }  = doc
+      cells_per_line
+      lines_per_page }  = doc
     #.......................................................................................................
     [ x1, y1, ]         = MKTS.get_next_xy doc
     [ xc, yc, ]         = MKTS.xy_from_idx doc, doc[ 'idx' ]
@@ -113,6 +114,9 @@ for name_ of TEACUP
         TABLE '.doc-table', =>
           TH(); TH x for x in [ 0 ... cells_per_line ]; TH()
           for y in [ 0 .. y1 ]
+            if y > 0 and y % lines_per_page is 0
+              TR =>
+                TD '.separator' for x in [ 0 ... cells_per_line + 1 ]
             TR =>
               TH y
               for x in [ 0 ... cells_per_line ]
@@ -133,6 +137,9 @@ for name_ of TEACUP
         TABLE '.doc-table', =>
           TH(); TH x for x in [ 0 ... cells_per_line ]; TH()
           for y in [ 0 .. y1 ]
+            if y > 0 and y % lines_per_page is 0
+              TR =>
+                TD '.separator' for x in [ 0 ... cells_per_line + 1 ]
             TR =>
               TH y
               for x in [ 0 ... cells_per_line ]

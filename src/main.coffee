@@ -129,7 +129,60 @@ verbose                   = no
   return me
 
 
-### TAINT next two methods have a lot of duplicated code ###
+###
+#===========================================================================================================
+
+
+
+       d8888 8888888b.  888     888        d8888 888b    888  .d8888b.  8888888888
+      d88888 888  "Y88b 888     888       d88888 8888b   888 d88P  Y88b 888
+     d88P888 888    888 888     888      d88P888 88888b  888 888    888 888
+    d88P 888 888    888 Y88b   d88P     d88P 888 888Y88b 888 888        8888888
+   d88P  888 888    888  Y88b d88P     d88P  888 888 Y88b888 888        888
+  d88P   888 888    888   Y88o88P     d88P   888 888  Y88888 888    888 888
+ d8888888888 888  .d88P    Y888P     d8888888888 888   Y8888 Y88b  d88P 888
+d88P     888 8888888P"      Y8P     d88P     888 888    Y888  "Y8888P"  8888888888
+
+
+
+#===========================================================================================================
+###
+
+#-----------------------------------------------------------------------------------------------------------
+@advance_line = ( me, size = null ) -> @_advance me, 'line', size
+@advance_page = ( me, size = null ) -> @_advance me, 'page', size
+
+#-----------------------------------------------------------------------------------------------------------
+@_advance = ( me, mode, size ) ->
+  { idx, } = me
+  return me if idx < 0
+  size   ?= me[ 'size' ]
+  #.........................................................................................................
+  switch mode
+    when 'line'
+      y1  = ( @_get_grid_line_ys me, ( @_get_y me ), size )[ 1 ]
+    when 'page'
+      p1  = @_get_page_idx me
+    else
+      throw new Error "unknown mode #{rpr mode}"
+  #.........................................................................................................
+  last_x  = null
+  last_y  = null
+  #.........................................................................................................
+  loop
+    [ x, y, ] = @_get_xy me
+    if mode is 'line'
+      break if y > y1
+    else
+      p = ( @pcr_from_xy me, [ x, y, ] )[ 0 ]
+      break if p > p1
+    last_x = x
+    last_y = y
+    @advance_chr me
+  #.........................................................................................................
+  me[ 'idx' ] = @idx_from_xy me, [ last_x, last_y, ]
+  return me
+
 #-----------------------------------------------------------------------------------------------------------
 @advance_chr = ( me ) ->
   { size, cells, idx, } = me
@@ -158,34 +211,6 @@ verbose                   = no
     me[ 'cells' ][ me[ 'idx' ] ] = me[ 'auto_space_chr' ] if cell_is_free
   return me
 
-#-----------------------------------------------------------------------------------------------------------
-@advance_chr_if_necessary = ( me ) ->
-  ### Like `advance_chr`, but assuming that an advance has just been taken place and we have too look
-    whther the new position is suitable for a character of (a new) `size`. ###
-  { size, cells, } = me
-  #.........................................................................................................
-  ### If character size is 1, we can simply stay where we are. ###
-  if size is 1
-    loop
-      cell_is_free  = cells[ me[ 'idx' ] ] is undefined
-      break if cell_is_free
-      me[ 'idx' ]  += 1
-    return me
-  #.........................................................................................................
-  ### If character size `s` is greater than 1, we must advance to a position on a line that has both an
-    integer multiple of `s` free cells left and that is a multiple integer (including 0) of `s` lines from
-    the top. We go step by step, filling up blank cells with `auto_space_chr`. ###
-  # count = 0
-  loop
-    enough_free_cells   = ( @_get_remaining_line_length me ) >= 1
-    on_grid_line        = ( ( @_get_y me ) %% size ) is 0
-    cell_is_free        = cells[ me[ 'idx' ] ] is undefined
-    break if enough_free_cells and on_grid_line and cell_is_free
-    me[ 'cells' ][ me[ 'idx' ] ] = me[ 'auto_space_chr' ] if cell_is_free
-    me[ 'idx' ] += 1
-    # count += 1; break if count > 10
-  return me
-
 
 ###
 #===========================================================================================================
@@ -200,6 +225,7 @@ d88P  Y88b d88P" "Y88b 8888b   d8888 888   Y88b 888   Y88b 888        d88P  Y88b
 888    888 888     888 888  Y8P  888 888        888 T88b   888              "888       "888
 Y88b  d88P Y88b. .d88P 888   "   888 888        888  T88b  888        Y88b  d88P Y88b  d88P
  "Y8888P"   "Y88888P"  888       888 888        888   T88b 8888888888  "Y8888P"   "Y8888P"
+
 
 
 #===========================================================================================================
@@ -234,6 +260,7 @@ Y88b  d88P Y88b. .d88P 888   "   888 888        888  T88b  888        Y88b  d88P
   #.........................................................................................................
   ### Don't do anything if we're at the start of the document: ###
   return me if idx < 0
+  return me if cells[ idx ] is undefined
   ### Don't do anything if the current character isn't a size 1 character: ###
   return me unless ( @size_of me, idx ) is 1
   #.........................................................................................................
@@ -375,10 +402,11 @@ Y88b  d88P Y88b. .d88P Y88b. .d88P 888  T88b  888  .d88P   888   888   Y8888  d8
 @_rpr_idx   = ( me, idx  ) -> @_rpr_xy me, @xy_from_pos me, idx
 
 #-----------------------------------------------------------------------------------------------------------
-@_get_idx   = ( me ) -> me[ 'idx' ]
-@_get_xy    = ( me ) -> @xy_from_idx me, me[ 'idx' ]
-@_get_x     = ( me ) -> ( @_get_xy me )[ 0 ]
-@_get_y     = ( me ) -> ( @_get_xy me )[ 1 ]
+@_get_idx       = ( me ) -> me[ 'idx' ]
+@_get_xy        = ( me ) -> @xy_from_idx me, me[ 'idx' ]
+@_get_x         = ( me ) -> ( @_get_xy me )[ 0 ]
+@_get_y         = ( me ) -> ( @_get_xy me )[ 1 ]
+@_get_page_idx  = ( me ) -> ( @pcr_from_xy me, @_get_xy me )[ 0 ]
 
 
 ###
@@ -710,8 +738,9 @@ Y88b  d88P     888     888  T88b  888         d8888888888 888   "   888 Y88b  d8
   return rpr cell
 
 #-----------------------------------------------------------------------------------------------------------
-@_get_remaining_line_length = ( me ) ->
-  return ( me[ 'cells_per_line' ] - @_get_x me ) // me[ 'size' ]
+@_get_remaining_line_length = ( me, size = null ) ->
+  size ?= me[ 'size' ]
+  return ( me[ 'cells_per_line' ] - @_get_x me ) // size
 
 
 ############################################################################################################
