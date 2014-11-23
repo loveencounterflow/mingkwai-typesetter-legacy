@@ -44,18 +44,66 @@ options =
   R[ 'height'         ] = settings?[ 'height'         ] ? 210 - 11 - 12 - 5
   R[ 'colors'         ] = colors = []
   R[ 'tex'            ] = "\\includegraphics[width=#{R[ 'width' ]}mm]{#{R[ 'route' ]}}"
+  #.........................................................................................................
+  R[ 'stack'          ] = []
+  R[ 'fill-color'     ] = null
+  R[ 'line-color'     ] = null
+  R[ 'line-width'     ] = null
+  R[ 'line-caps'      ] = 'round'
+  #.........................................................................................................
   colors[ 'red'       ] = settings?[ 'colors' ]?[ 'red'    ] ? '#86000b'
   colors[ 'blue'      ] = settings?[ 'colors' ]?[ 'blue'   ] ? '#21247b'
   colors[ 'black'     ] = settings?[ 'colors' ]?[ 'black'  ] ? '#000000'
-  substrate     = GM ( @px_from_mm R, R[ 'width' ] ), ( @px_from_mm R, R[ 'height' ] ), '#ffffffff'
-  R[ '%self' ]  = substrate
+  substrate             = GM ( @px_from_mm R, R[ 'width' ] ), ( @px_from_mm R, R[ 'height' ] ), '#ffffff00'
+  substrate.options { imageMagick: true, }
+  R[ '%self' ]          = substrate
   return R
 
 #-----------------------------------------------------------------------------------------------------------
-@px_from_mm = ( me, d_mm )            -> d_mm * me[ 'px-per-mm' ]
-@fill       = ( me, color         ) -> me[ '%self' ].fill   ( @get_color me, color )
-@stroke     = ( me, color, width  ) -> me[ '%self' ].stroke ( @get_color me, color ), @px_from_mm me, width
-@get_color  = ( me, color         ) -> me[ 'colors' ]?[ color ] ? color
+@push_style = ( me ) ->
+  style = {}
+  for name in [ 'fill-color', 'line-color', 'line-width', 'line-caps', ]
+    style[ name ] = me[ name ]
+  me[ 'stack' ].push style
+  return me
+
+#-----------------------------------------------------------------------------------------------------------
+@pop_style = ( me ) ->
+  style = me[ 'stack' ].pop()
+  @fill   me, style[ 'fill-color' ]
+  @stroke me, style[ 'line-color' ], style[ 'line-width' ], style[ 'line-caps'  ]
+  return me
+
+#-----------------------------------------------------------------------------------------------------------
+@px_from_mm = ( me, d_mm ) ->
+  return d_mm * me[ 'px-per-mm' ]
+
+#-----------------------------------------------------------------------------------------------------------
+@fill = ( me, color ) ->
+  me[ 'fill-color' ] = color
+  me[ '%self' ].fill ( @get_color me, color )
+  return me
+
+#-----------------------------------------------------------------------------------------------------------
+@stroke = ( me, color, width = 1, line_caps = 'round' ) ->
+  me[ 'line-color' ] = color
+  me[ 'line-width' ] = width
+  me[ 'line-caps'  ] = line_caps
+  me[ '%self' ].stroke ( @get_color me, color ), ( @px_from_mm me, width )
+  return me
+
+#-----------------------------------------------------------------------------------------------------------
+@move_xys = ( me, xys..., d_xy ) ->
+  arity = xys.length + if d_xy? then 1 else 0
+  throw new Error "expected at least 2 arguments, got #{arity}" unless arity >= 2
+  for xy in xys
+    xy[ 0 ] += d_xy[ 0 ]
+    xy[ 1 ] += d_xy[ 1 ]
+  return me
+
+#-----------------------------------------------------------------------------------------------------------
+@get_color = ( me, color ) ->
+  return me[ 'colors' ]?[ color ] ? color
 
 #-----------------------------------------------------------------------------------------------------------
 @write = ( me, handler  ) ->
@@ -73,22 +121,48 @@ options =
   x1 = @px_from_mm me, xy1[ 0 ]
   y1 = @px_from_mm me, xy1[ 1 ]
   me[ '%self' ].drawLine x0, y0, x1, y1
+  switch style = me[ 'line-caps' ]
+    when 'round'
+      @push_style me
+      radius    = me[ 'line-width' ] / 2
+      @fill       me, me[ 'line-color' ]
+      @stroke     me, 'transparent', 0
+      # debug '©CwCj1', me[ 'stack' ]
+      # debug '©CwCj1', me[ 'fill-color' ], me[ 'line-color' ]
+      @circle     me, xy0, radius
+      @circle     me, xy1, radius
+      @pop_style  me
+    else
+      throw new Error "unknown line-caps style #{rpr style}"
+  return me
+
+#-----------------------------------------------------------------------------------------------------------
+@circle = ( me, xy0, r ) ->
+  x0 = @px_from_mm me, xy0[ 0 ]
+  y0 = @px_from_mm me, xy0[ 1 ]
+  x1 = x0 + @px_from_mm me, r
+  y1 = y0
+  me[ '%self' ].drawCircle x0, y0, x1, y1
   return me
 
 #-----------------------------------------------------------------------------------------------------------
 @main = ( route, handler ) ->
   PLOTTER   = @
-  img       = PLOTTER.new_image null, route
-  xy0       = [ 0, 0, ]
-  xy1       = [ 243, 183 - 5, ]
+  settings  = null # imageMagick: true
+  img       = PLOTTER.new_image settings, route
+  xy0       = [ 10, 10, ]
+  xy1       = [ 24, 18, ]
   # img = GM options[ 'width.px' ], options[ 'height.px' ], "#ffffffff"
     # .fontSize 68
     # .fill 'transparent'
     # .stroke red, 3
+  substrate = img[ '%self' ]
+  PLOTTER.fill    img, 'white'
   PLOTTER.fill    img, 'transparent'
-  PLOTTER.stroke  img, 'red', 0.225
+  PLOTTER.stroke  img, 'red', 5
   PLOTTER.line    img, xy0, xy1
-  # debug img
+  PLOTTER.line    img, [ 20, 20, ], [ 30, 30, ]
+  # PLOTTER.circle  img, xy0, xy1
   #.........................................................................................................
   PLOTTER.write img, handler
   info img[ 'tex' ]
@@ -97,7 +171,8 @@ options =
 
 ############################################################################################################
 unless module.parent?
-  @main null, ( error ) ->
+  # @main null, ( error ) ->
+  @main '/tmp/img.png', ( error ) ->
     throw error if error?
     help 'ok'
 

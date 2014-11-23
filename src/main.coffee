@@ -40,14 +40,15 @@ verbose                   = no
     cells:            []
     idx:              -1 # next glyph position
     size:             1
-  R[ 'keep_x_grid'    ] = settings[ 'keep_x_grid'     ] ? no
-  R[ 'cells_per_line' ] = settings[ 'cells-per-line'  ] ? 8
-  R[ 'lines_per_page' ] = settings[ 'lines-per-page'  ] ? 6
-  R[ 'auto_space_chr' ] = settings[ 'auto-space-chr'  ] ? '\u3000'
-  R[ 'blockade_chr'   ] = settings[ 'blockade-chr'    ] ? '＃'
-  R[ 'free_cell_chr'  ] = settings[ 'free-cell-chr'   ] ? '〇'
-  R[ 'layout'         ] = settings[ 'layout'          ] ? 'rows'
-  R[ 'direction'      ] = settings[ 'direction'       ] ? 'ltr'
+  R[ 'keep_x_grid'        ] = settings[ 'keep_x_grid'     ] ? no
+  R[ 'cells_per_line'     ] = settings[ 'cells-per-line'  ] ? 8
+  R[ 'lines_per_page'     ] = settings[ 'lines-per-page'  ] ? 6
+  R[ 'auto_space_chr'     ] = settings[ 'auto-space-chr'  ] ? '\u3000'
+  R[ 'blockade_chr'       ] = settings[ 'blockade-chr'    ] ? '＃'
+  R[ 'free_cell_chr'      ] = settings[ 'free-cell-chr'   ] ? '〇'
+  R[ 'layout'             ] = settings[ 'layout'          ] ? 'rows'
+  R[ 'direction'          ] = settings[ 'direction'       ] ? 'ltr'
+  R[ 'border_block_size'  ] = null
   throw new Error "`keep_x_grid` not implemented" if R[ 'keep_x_grid' ]
   return R
 
@@ -79,13 +80,21 @@ verbose                   = no
   return Proxy R, get_observer 'doc'
 
 #-----------------------------------------------------------------------------------------------------------
-@_new_block = ( me, content ) ->
+@_new_block = ( me, content, content_key ) ->
   { size, } = me
-  return content if size is 1
+  #.........................................................................................................
   R =
     '~isa':   'MINGKWAI/TYPESETTER/block'
     size:     size
-    content:  content
+    border:   null
+  #.........................................................................................................
+  if content_key?
+    R[ 'content_key'  ] = content_key
+    R[ 'content'      ] = content[ content_key ]
+    R[ 'data'         ] = content
+  else
+    R[ 'content'      ] = content
+  #.........................................................................................................
   return R
 
 #-----------------------------------------------------------------------------------------------------------
@@ -110,8 +119,7 @@ verbose                   = no
   return me
 
 #-----------------------------------------------------------------------------------------------------------
-@put = ( me, content ) ->
-  ### TAINT `put` doesn't honor `size` ###
+@put = ( me, content, content_key = null ) ->
   @advance_chr me
   { idx
     size
@@ -119,7 +127,7 @@ verbose                   = no
     blockade_chr }      = me
   [ x0, y0, ]           = @_get_xy me
   #.........................................................................................................
-  @_set me, idx, @_new_block me, content
+  @_set me, idx, @_new_block me, content, content_key
   #.........................................................................................................
   for dx in [ 0 ... size ]
     for dy in [ 0 ... size ]
@@ -128,6 +136,128 @@ verbose                   = no
   #.........................................................................................................
   return me
 
+
+###
+#===========================================================================================================
+
+
+
+888888b.    .d88888b.  8888888b.  8888888b.  8888888888 8888888b.   .d8888b.
+888  "88b  d88P" "Y88b 888   Y88b 888  "Y88b 888        888   Y88b d88P  Y88b
+888  .88P  888     888 888    888 888    888 888        888    888 Y88b.
+8888888K.  888     888 888   d88P 888    888 8888888    888   d88P  "Y888b.
+888  "Y88b 888     888 8888888P"  888    888 888        8888888P"      "Y88b.
+888    888 888     888 888 T88b   888    888 888        888 T88b         "888
+888   d88P Y88b. .d88P 888  T88b  888  .d88P 888        888  T88b  Y88b  d88P
+8888888P"   "Y88888P"  888   T88b 8888888P"  8888888888 888   T88b  "Y8888P"
+
+
+
+#===========================================================================================================
+###
+
+#-----------------------------------------------------------------------------------------------------------
+@_new_border_info = ( me, type, size, position ) ->
+  #.........................................................................................................
+  unless type in [ 'box', ]
+    throw new Error "unknown type #{rpr type}"
+  #.........................................................................................................
+  unless size in [ 1, 2, 3, 4, ]
+    throw new Error "illegal size #{rpr size}"
+  #.........................................................................................................
+  unless position in [ 'lone', 'start', 'middle', 'end' ]
+    throw new Error "unknown type #{rpr type}"
+  #.........................................................................................................
+  R =
+    '~isa':     'MINGKWAI/TYPESETTER/border-info'
+    'type':     type
+    'size':     size
+    'position': position
+  #.........................................................................................................
+  return R
+
+#-----------------------------------------------------------------------------------------------------------
+@_new_border = ( me, start, stop ) ->
+  #.........................................................................................................
+  R =
+    '~isa':     'MINGKWAI/TYPESETTER/border'
+    'start':    start
+    'stop':     stop
+  #.........................................................................................................
+  return R
+
+#-----------------------------------------------------------------------------------------------------------
+@start_box = ( me ) ->
+  { idx
+    cells } = me
+  block     = cells[ idx ]
+  #.........................................................................................................
+  unless ( type = TYPES.type_of block ) is 'MINGKWAI/TYPESETTER/block'
+    throw new Error "unable to use borders on content of type #{rpr type}"
+  #.........................................................................................................
+  ### TAINT must finish previous box ###
+  { size }                  = block
+  block[ 'border' ]         = @_new_border_info me, 'box', size, 'start'
+  me[ 'border_block_size' ] = size
+  #.........................................................................................................
+  return me
+
+#-----------------------------------------------------------------------------------------------------------
+@box = ( me ) ->
+  { idx
+    cells } = me
+  block     = cells[ idx ]
+  #.........................................................................................................
+  unless ( type = TYPES.type_of block ) is 'MINGKWAI/TYPESETTER/block'
+    throw new Error "unable to use borders on content of type #{rpr type}"
+  #.........................................................................................................
+  ### TAINT must finish previous box ###
+  { size }                  = block
+  block[ 'border' ]         = @_new_border_info me, 'box', size, 'lone'
+  me[ 'border_block_size' ] = null
+  #.........................................................................................................
+  return me
+
+#-----------------------------------------------------------------------------------------------------------
+@get_borders = ( me, page_idx = null ) ->
+  R         = []
+  { cells } = me
+  ### TAINT should implement `idx_from_pcr` ###
+  #.........................................................................................................
+  for block, idx in cells
+    continue unless ( TYPES.type_of block ) is 'MINGKWAI/TYPESETTER/block'
+    { border }  = block
+    continue unless border?
+    xy    = @xy_from_idx me, idx
+    pcr   = @pcr_from_xy me, xy
+    ### TAINT should implement `idx_from_pcr` ###
+    continue if page_idx? and page_idx isnt pcr[ 0 ]
+    { type
+      position
+      size      } = border
+    #.......................................................................................................
+    switch type
+      #.....................................................................................................
+      when 'box'
+        #...................................................................................................
+        switch position
+          #.................................................................................................
+          when 'lone'
+            [ _, col0, row0, ] = pcr
+            col1 = col0 + size
+            row1 = row0 + size
+            entry = [ @_new_border me, [ page_idx, col0, row0, ], [ page_idx, col1, row0, ]
+                      @_new_border me, [ page_idx, col1, row0, ], [ page_idx, col1, row1, ]
+                      @_new_border me, [ page_idx, col0, row1, ], [ page_idx, col1, row1, ]
+                      @_new_border me, [ page_idx, col0, row0, ], [ page_idx, col0, row1, ] ]
+          #.................................................................................................
+          else warn "unknown border type #{rpr type}"
+      #.....................................................................................................
+      else warn "unknown border type #{rpr type}"
+      # else throw new Error "unknown border type #{rpr type}"
+    R.push entry
+  #.........................................................................................................
+  return R
 
 ###
 #===========================================================================================================
@@ -437,6 +567,8 @@ Y88b  d88P Y88b. .d88P Y88b. .d88P 888  T88b  888  .d88P   888   888   Y8888  d8
     blockade_chr    } = me
   last_page_idx       = null
   #.........................................................................................................
+  handler null, [ 'start', ]
+  #.........................................................................................................
   for content, idx in cells
     switch type = TYPES.type_of content
       when 'jsundefined', 'MINGKWAI/TYPESETTER/blockade'
@@ -455,11 +587,13 @@ Y88b  d88P Y88b. .d88P Y88b. .d88P 888  T88b  888  .d88P   888   888   Y8888  d8
     page_idx  = pcr[ 0 ]
     #.......................................................................................................
     if page_idx isnt last_page_idx
-      handler null, [ 'page', page_idx, ]
+      handler null, [ 'page-end', last_page_idx, ] if last_page_idx?
+      handler null, [ 'page',          page_idx, ]
       last_page_idx = page_idx
     #.......................................................................................................
     handler null, [ 'block', xy, pcr, size, content_txt, ]
   #.........................................................................................................
+  handler null, [ 'page-end', last_page_idx, ] if last_page_idx?
   handler null, [ 'end', ]
   return me
 
