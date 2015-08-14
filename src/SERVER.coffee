@@ -38,7 +38,7 @@ urge                      = TRM.get_logger 'urge',    badge
 whisper                   = TRM.get_logger 'whisper', badge
 help                      = TRM.get_logger 'help',    badge
 #...........................................................................................................
-RMY                       = require 'remarkably'
+# RMY                       = require 'remarkably'
 Htmlparser                = ( require 'htmlparser2' ).Parser
 XNCHR                     = require './XNCHR'
 #...........................................................................................................

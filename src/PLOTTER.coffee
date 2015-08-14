@@ -93,6 +93,13 @@ options =
   return me
 
 #-----------------------------------------------------------------------------------------------------------
+@print = ( me, xy, text ) ->
+  me[ '%self' ].font 'Helvetica'
+  me[ '%self' ].fontSize me[ 'px-per-mm' ] * 3
+  me[ '%self' ].drawText xy[ 0 ], xy[ 1 ], text
+  return me
+
+#-----------------------------------------------------------------------------------------------------------
 @move_xys = ( me, xys..., d_xy ) ->
   arity = xys.length + if d_xy? then 1 else 0
   throw new Error "expected at least 2 arguments, got #{arity}" unless arity >= 2
@@ -106,7 +113,7 @@ options =
   return me[ 'colors' ]?[ color ] ? color
 
 #-----------------------------------------------------------------------------------------------------------
-@write = ( me, handler  ) ->
+@write_file = ( me, handler  ) ->
   # switch arity = arguments.length
   #   when 2
   #     handler = route
@@ -164,7 +171,7 @@ options =
   PLOTTER.line    img, [ 20, 20, ], [ 30, 30, ]
   # PLOTTER.circle  img, xy0, xy1
   #.........................................................................................................
-  PLOTTER.write img, handler
+  PLOTTER.write_file img, handler
   info img[ 'tex' ]
   return null
 

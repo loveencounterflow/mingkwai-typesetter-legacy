@@ -54,6 +54,7 @@ verbose                   = no
 
 #-----------------------------------------------------------------------------------------------------------
 @new_observable_document = ( settings, handler ) ->
+  # debug '©8ytM8', Proxy
   require 'harmony-reflect'
   #.........................................................................................................
   switch arity = arguments.length
@@ -591,7 +592,9 @@ Y88b  d88P Y88b. .d88P Y88b. .d88P 888  T88b  888  .d88P   888   888   Y8888  d8
       handler null, [ 'page',          page_idx, ]
       last_page_idx = page_idx
     #.......................................................................................................
-    handler null, [ 'block', xy, pcr, size, content_txt, ]
+    event = [ 'block', xy, pcr, size, content_txt, ]
+    event.push data if ( data = content[ 'data' ] )?
+    handler null, event
   #.........................................................................................................
   handler null, [ 'page-end', last_page_idx, ] if last_page_idx?
   handler null, [ 'end', ]
@@ -775,14 +778,19 @@ Y88b  d88P     888     888  T88b  888         d8888888888 888   "   888 Y88b  d8
     langPrefix:     'language-',    # CSS language prefix for fenced blocks
     linkify:        yes,            # Autoconvert URL-like text to links
     typographer:    yes,
-    quotes:         '“”‘’'
+    # quotes:         '“”‘’'
+    # quotes:         '""\'\''
+    quotes:         '""`\''
+    # quotes:         [ '<<', '>>', '!!!', '???', ]
   #.........................................................................................................
   R = RMY.new_parser feature_set, settings
-  RMY.use R, RMY.get.examples.brackets opener: '《',  closer: '》', arity: 1, name: 'book-title'
-  RMY.use R, RMY.get.examples.brackets opener: '(',  closer: ')', arity: 1, name: 'size-1'
-  RMY.use R, RMY.get.examples.brackets opener: '(',  closer: ')', arity: 2, name: 'size-2'
-  RMY.use R, RMY.get.examples.brackets opener: '(',  closer: ')', arity: 3, name: 'size-3'
-  RMY.use R, RMY.get.examples.brackets opener: '(',  closer: ')', arity: 4, name: 'size-4'
+  # RMY.use R, RMY.get.examples.brackets  opener: '《',  closer: '》', arity: 1, name: 'book-title'
+  RMY.use R, RMY.get.examples.brackets  opener: '[[[',  closer: ']]]', arity: 1, name: 'fullwidth'
+  RMY.use R, RMY.get.examples.newline()
+  # RMY.use R, RMY.get.examples.brackets opener: '(',  closer: ')', arity: 1, name: 'size-1'
+  # RMY.use R, RMY.get.examples.brackets opener: '(',  closer: ')', arity: 2, name: 'size-2'
+  # RMY.use R, RMY.get.examples.brackets opener: '(',  closer: ')', arity: 3, name: 'size-3'
+  # RMY.use R, RMY.get.examples.brackets opener: '(',  closer: ')', arity: 4, name: 'size-4'
   RMY.use R, RMY.get.examples.xncrs()
   return R
 
@@ -829,7 +837,7 @@ Y88b  d88P     888     888  T88b  888         d8888888888 888   "   888 Y88b  d8
   setImmediate =>
     mdx_parser  = @_new_mdx_parser()
     html        = mdx_parser.render text
-    info html
+    # help '©YzNQP',  html
     html_parser = @_new_html_parser R
     html_parser.write html
     html_parser.end()
