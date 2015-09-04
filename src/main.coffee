@@ -22,7 +22,8 @@ whisper                   = TRM.get_logger 'whisper', badge
 help                      = TRM.get_logger 'help',    badge
 echo                      = TRM.echo.bind TRM
 #...........................................................................................................
-RMY                       = require 'remarkably'
+# RMY                       = require 'remarkably'
+RMY                       = require '/Volumes/Storage/io/remarkably'
 Htmlparser                = ( require 'htmlparser2' ).Parser
 # XNCHR                     = require './XNCHR'
 XNCHR                     = require './XNCHR'
@@ -783,9 +784,6 @@ Y88b  d88P     888     888  T88b  888         d8888888888 888   "   888 Y88b  d8
     quotes:         '""`\''
     # quotes:         [ '<<', '>>', '!!!', '???', ]
   #.........................................................................................................
-  debug '©LiQ6y', RMY
-  CND.dir RMY
-
   R = RMY.new_parser feature_set, settings
   # RMY.use R, RMY.get.examples.brackets  opener: '《',  closer: '》', arity: 1, name: 'book-title'
   RMY.use R, RMY.get.examples.brackets  opener: '[[[',  closer: ']]]', arity: 1, name: 'fullwidth'
