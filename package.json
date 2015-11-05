@@ -1,5 +1,5 @@
 {
-  "name": "mingkwai-typesetter",
+  "name": "mingkwai-typesetter-legacy",
   "version": "0.1.14",
   "description": "A Classical Chinese Typewriter / Typesetter for the Digital Age",
   "main": "lib/main.js",
@@ -8,7 +8,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/loveencounterflow/mingkwai-typesetter.git"
+    "url": "https://github.com/loveencounterflow/mingkwai-typesetter-legacy.git"
   },
   "keywords": [
     "mingkwai",
@@ -21,9 +21,9 @@
   "author": "",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/loveencounterflow/mingkwai-typesetter/issues"
+    "url": "https://github.com/loveencounterflow/mingkwai-typesetter-legacy/issues"
   },
-  "homepage": "https://github.com/loveencounterflow/mingkwai-typesetter",
+  "homepage": "https://github.com/loveencounterflow/mingkwai-typesetter-legacy",
   "dependencies": {
     "coffee-script": "^1.8.0",
     "coffeenode-bitsnpieces": "0.0.23",
@@ -38,7 +38,6 @@
     "lodash": "^2.4.1",
     "mathjs": "^1.1.1",
     "pipedreams": "^0.1.4",
-    "remarkably": "^0.1.9",
     "socket.io": "^1.2.0",
     "temp": "^0.8.1"
   }
