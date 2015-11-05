@@ -23,7 +23,7 @@ help                      = TRM.get_logger 'help',    badge
 echo                      = TRM.echo.bind TRM
 #...........................................................................................................
 # RMY                       = require 'remarkably'
-RMY                       = require '/Volumes/Storage/io/remarkably'
+RMY                       = require 'remarkably'
 Htmlparser                = ( require 'htmlparser2' ).Parser
 # XNCHR                     = require './XNCHR'
 XNCHR                     = require './XNCHR'
@@ -838,7 +838,7 @@ Y88b  d88P     888     888  T88b  888         d8888888888 888   "   888 Y88b  d8
   setImmediate =>
     mdx_parser  = @_new_mdx_parser()
     html        = mdx_parser.render text
-    # help '©YzNQP',  html
+    help '©YzNQP',  html
     html_parser = @_new_html_parser R
     html_parser.write html
     html_parser.end()
